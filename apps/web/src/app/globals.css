@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-inter: "Inter", system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-white text-ink-900 antialiased;
+}
+
+/* Reusable section container so spacing rules never fight each other */
+.container-page {
+  @apply mx-auto w-full max-w-7xl px-6 lg:px-8;
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@flowcrm/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate --schema src/prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema src/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "express": "^4.19.0",
+    "@prisma/client": "^5.17.0",
+    "zod": "^3.23.0",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.4.0",
+    "@clerk/express": "^1.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "prisma": "^5.17.0",
+    "ts-node-dev": "^2.0.0",
+    "@types/express": "^4.17.0",
+    "@types/cors": "^2.8.0",
+    "@types/node": "^20.14.0"
+  }
+}
