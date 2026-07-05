@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 const NAV_LINKS = [
-  { label: "Features", hasDropdown: true },
-  { label: "Industries", hasDropdown: true },
-  { label: "Pricing", hasDropdown: false },
-  { label: "Resources", hasDropdown: true },
-  { label: "Company", hasDropdown: true },
+  { label: "Features", href: "/#features" },
+  { label: "Industries", href: "/industries" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "Resources", href: "/resources" },
+  { label: "Company", href: "/company" },
 ];
 
 export function Navbar() {
@@ -25,10 +25,12 @@ export function Navbar() {
         <ul className="hidden items-center gap-7 md:flex">
           {NAV_LINKS.map((link) => (
             <li key={link.label}>
-              <button className="flex items-center gap-1 text-sm font-medium text-ink-700 transition-colors hover:text-ink-900">
+              <Link
+                href={link.href}
+                className="text-sm font-medium text-ink-700 transition-colors hover:text-ink-900"
+              >
                 {link.label}
-                {link.hasDropdown && <ChevronDown className="h-3.5 w-3.5" aria-hidden />}
-              </button>
+              </Link>
             </li>
           ))}
         </ul>

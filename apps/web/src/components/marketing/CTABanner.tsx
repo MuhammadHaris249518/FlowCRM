@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Clock, CreditCard, HeadphonesIcon, ShieldCheck } from "lucide-react";
 
 const PERKS = [
@@ -21,12 +22,18 @@ export function CTABanner() {
               and work smarter.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <button className="rounded-lg bg-white px-6 py-3 text-sm font-semibold text-brand-600 transition-opacity hover:opacity-90">
+              <Link
+                href="/register"
+                className="rounded-lg bg-white px-6 py-3 text-sm font-semibold text-brand-600 transition-opacity hover:opacity-90"
+              >
                 Start Free Trial
-              </button>
-              <button className="rounded-lg border border-white/40 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
+              </Link>
+              <Link
+                href="/book-demo"
+                className="rounded-lg border border-white/40 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+              >
                 Book a Demo
-              </button>
+              </Link>
             </div>
           </div>
 

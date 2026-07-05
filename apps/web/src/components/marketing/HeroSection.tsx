@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import { DashboardPreview } from "./DashboardPreview";
 
@@ -38,12 +39,18 @@ export function HeroSection() {
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <button className="rounded-lg bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-600">
+            <Link
+              href="/register"
+              className="rounded-lg bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-600"
+            >
               Start Free Trial
-            </button>
-            <button className="rounded-lg border border-surface-border px-6 py-3 text-sm font-semibold text-ink-900 transition-colors hover:bg-surface-muted">
+            </Link>
+            <Link
+              href="/book-demo"
+              className="rounded-lg border border-surface-border px-6 py-3 text-sm font-semibold text-ink-900 transition-colors hover:bg-surface-muted"
+            >
               Book a Demo
-            </button>
+            </Link>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2">

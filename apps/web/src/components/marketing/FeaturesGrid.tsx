@@ -83,7 +83,7 @@ const FEATURES: Feature[] = [
 
 export function FeaturesGrid() {
   return (
-    <section className="bg-surface-muted py-20">
+    <section id="features" className="bg-surface-muted py-20">
       <div className="container-page">
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-600">
@@ -112,9 +112,6 @@ export function FeaturesGrid() {
               <p className="mt-2 text-sm leading-relaxed text-ink-500">
                 {feature.description}
               </p>
-              <button className="mt-4 text-sm font-semibold text-brand-500 hover:text-brand-600">
-                Learn more →
-              </button>
             </div>
           ))}
         </div>
