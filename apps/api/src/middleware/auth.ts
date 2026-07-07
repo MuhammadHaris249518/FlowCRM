@@ -1,42 +1,87 @@
+import { getAuth } from "@clerk/express";
 import type { NextFunction, Request, Response } from "express";
-import { AppError } from "../errors/app-error";
 import type { Role } from "@prisma/client";
+import { AppError } from "../errors/app-error";
+import { prisma } from "../lib/prisma";
 
-// Populated by requireAuth after verifying the Clerk session and
-// resolving the caller's membership for the active organization.
+// Named authContext (not `auth`) deliberately — @clerk/express's own
+// clerkMiddleware() populates req.auth with its AuthObject type, which would
+// otherwise collide with our custom shape via declaration merging.
 export interface AuthContext {
   userId: string;
+  clerkId: string;
   organizationId: string;
   role: Role;
 }
 
 declare module "express-serve-static-core" {
   interface Request {
-    auth?: AuthContext;
+    authContext?: AuthContext;
   }
 }
 
-// In production this verifies the Clerk session token (via @clerk/express)
-// and loads the user's Membership row for the org in the `x-org-id` header
-// or subdomain. Kept as a clear extension point rather than hardcoding here.
-export function requireAuth() {
-  return async (req: Request, _res: Response, next: NextFunction) => {
-    const sessionToken = req.headers.authorization?.replace("Bearer ", "");
-    if (!sessionToken) {
-      return next(AppError.unauthorized());
-    }
-
-    // TODO: verify with Clerk SDK, then look up Membership by clerkId + orgId
-    // req.auth = { userId, organizationId, role };
+/**
+ * Verifies a valid Clerk session exists, but does NOT require organization
+ * membership. Use for endpoints that must work before a user has joined/
+ * created an org — GET /auth/me, POST /auth/organizations.
+ */
+export function requireAuthenticatedClerkSession() {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const { userId } = getAuth(req);
+    if (!userId) return next(AppError.unauthorized());
     next();
   };
 }
 
-// Usage: router.get('/summary', requireAuth(), requireRole(['ORG_OWNER', 'SALES_MANAGER']), handler)
+/**
+ * Verifies a valid Clerk session AND resolves the caller's Membership for the
+ * organization named in the `X-Organization-Id` header, populating
+ * req.authContext. Every org-scoped route (dashboard, CRM, leads, pipeline...)
+ * uses this.
+ */
+export function requireAuth() {
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    const { userId: clerkId } = getAuth(req);
+    if (!clerkId) return next(AppError.unauthorized());
+
+    const organizationId = req.header("x-organization-id");
+    if (!organizationId) {
+      return next(
+        AppError.badRequest(
+          "Missing X-Organization-Id header — select an active organization first",
+          "ORGANIZATION_REQUIRED"
+        )
+      );
+    }
+
+    const user = await prisma.user.findUnique({ where: { clerkId } });
+    if (!user) {
+      return next(
+        AppError.unauthorized("User record not found. Please complete onboarding.")
+      );
+    }
+
+    const membership = await prisma.membership.findUnique({
+      where: { userId_organizationId: { userId: user.id, organizationId } },
+    });
+    if (!membership) {
+      return next(AppError.forbidden("You are not a member of this organization"));
+    }
+
+    req.authContext = {
+      userId: user.id,
+      clerkId,
+      organizationId,
+      role: membership.role,
+    };
+    next();
+  };
+}
+
 export function requireRole(allowed: Role[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
-    if (!req.auth) return next(AppError.unauthorized());
-    if (!allowed.includes(req.auth.role)) {
+    if (!req.authContext) return next(AppError.unauthorized());
+    if (!allowed.includes(req.authContext.role)) {
       return next(AppError.forbidden("Your role cannot access this resource"));
     }
     next();
