@@ -1,4 +1,4 @@
-import { apiGet } from "@/lib/api-client";
+import { apiClient, type RequestContext } from "@/lib/api-client";
 import type {
   Activity,
   DashboardRange,
@@ -7,12 +7,14 @@ import type {
 } from "../types";
 
 export const dashboardApi = {
-  getSummary: (range: DashboardRange) =>
-    apiGet<DashboardSummary>("/dashboard/summary", { range }),
+  getSummary: (ctx: RequestContext, range: DashboardRange) =>
+    apiClient.get<DashboardSummary>("/dashboard/summary", ctx, { range }),
 
-  getPipelineOverview: () =>
-    apiGet<PipelineOverview>("/dashboard/pipeline-overview"),
+  getPipelineOverview: (ctx: RequestContext) =>
+    apiClient.get<PipelineOverview>("/dashboard/pipeline-overview", ctx),
 
-  getRecentActivities: (limit = 10) =>
-    apiGet<Activity[]>("/dashboard/recent-activities", { limit: String(limit) }),
+  getRecentActivities: (ctx: RequestContext, limit = 10) =>
+    apiClient.get<Activity[]>("/dashboard/recent-activities", ctx, {
+      limit: String(limit),
+    }),
 };

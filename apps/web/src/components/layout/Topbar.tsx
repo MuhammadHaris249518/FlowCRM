@@ -1,4 +1,5 @@
 import { Bell, Search } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
 
 export function Topbar({ title }: { title: string }) {
   return (
@@ -13,7 +14,7 @@ export function Topbar({ title }: { title: string }) {
         <button aria-label="Notifications" className="text-ink-500 hover:text-ink-900">
           <Bell className="h-5 w-5" aria-hidden />
         </button>
-        <div className="h-8 w-8 rounded-full bg-brand-100" />
+        <UserButton afterSignOutUrl="/login" />
       </div>
     </header>
   );
