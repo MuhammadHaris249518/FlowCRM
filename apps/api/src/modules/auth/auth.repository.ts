@@ -1,20 +1,19 @@
-import { prisma } from "../../lib/prisma";
+import { User, Organization, Membership } from "../../models";
 
 export const authRepository = {
   findUserByClerkId(clerkId: string) {
-    return prisma.user.findUnique({ where: { clerkId } });
+    return User.findOne({ clerkId }).exec();
   },
 
   findMembershipsForUser(userId: string) {
-    return prisma.membership.findMany({
-      where: { userId },
-      include: { organization: true },
-      orderBy: { createdAt: "asc" },
-    });
+    return Membership.find({ userId })
+      .populate("organization")
+      .sort({ createdAt: 1 })
+      .exec();
   },
 
   findOrganizationBySlug(slug: string) {
-    return prisma.organization.findUnique({ where: { slug } });
+    return Organization.findOne({ slug }).exec();
   },
 
   async upsertUserFromClerk(input: {
@@ -23,28 +22,35 @@ export const authRepository = {
     fullName: string;
     avatarUrl: string | null;
   }) {
-    return prisma.user.upsert({
-      where: { clerkId: input.clerkId },
-      update: { email: input.email, fullName: input.fullName, avatarUrl: input.avatarUrl },
-      create: input,
-    });
+    return User.findOneAndUpdate(
+      { clerkId: input.clerkId },
+      {
+        email: input.email,
+        fullName: input.fullName,
+        avatarUrl: input.avatarUrl,
+      },
+      { new: true, upsert: true }
+    ).exec();
   },
 
-  // Wrapped in a transaction — an organization created without its owner
-  // Membership (or vice versa) is an invalid, unrecoverable state.
-  createOrganizationWithOwner(input: { name: string; slug: string; userId: string }) {
-    return prisma.$transaction(async (tx) => {
-      const organization = await tx.organization.create({
-        data: { name: input.name, slug: input.slug },
-      });
-      const membership = await tx.membership.create({
-        data: { userId: input.userId, organizationId: organization.id, role: "ORG_OWNER" },
-      });
-      return { organization, membership };
+  async createOrganizationWithOwner(input: { name: string; slug: string; userId: string }) {
+    const organization = new Organization({
+      name: input.name,
+      slug: input.slug,
     });
+    await organization.save();
+
+    const membership = new Membership({
+      userId: input.userId,
+      organizationId: organization._id.toString(),
+      role: "ORG_OWNER",
+    });
+    await membership.save();
+
+    return { organization, membership };
   },
 
   deleteUserByClerkId(clerkId: string) {
-    return prisma.user.deleteMany({ where: { clerkId } });
+    return User.deleteMany({ clerkId }).exec();
   },
 };
