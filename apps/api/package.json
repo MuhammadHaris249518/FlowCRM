@@ -16,7 +16,8 @@
     "cors": "^2.8.5",
     "helmet": "^7.1.0",
     "express-rate-limit": "^7.4.0",
-    "@clerk/express": "^1.1.0"
+    "@clerk/express": "^1.1.0",
+    "svix": "^1.24.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
