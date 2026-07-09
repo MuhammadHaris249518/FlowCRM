@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mongodb"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -148,7 +148,7 @@ model Lead {
 model Deal {
   id             String    @id @default(cuid())
   title          String
-  value          Float
+  value          Decimal   @db.Decimal(12, 2)
   stage          DealStage @default(NEW)
   organizationId String
   companyId      String?

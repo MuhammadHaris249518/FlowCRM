@@ -1,8 +1,8 @@
 import { getAuth } from "@clerk/express";
 import type { NextFunction, Request, Response } from "express";
-import type { Role } from "../models";
+import type { Role } from "@prisma/client";
 import { AppError } from "../errors/app-error";
-import { User, Membership } from "../models";
+import { prisma } from "../lib/prisma";
 
 // Named authContext (not `auth`) deliberately — @clerk/express's own
 // clerkMiddleware() populates req.auth with its AuthObject type, which would
@@ -54,17 +54,16 @@ export function requireAuth() {
       );
     }
 
-    const user = await User.findOne({ clerkId }).exec();
+    const user = await prisma.user.findUnique({ where: { clerkId } });
     if (!user) {
       return next(
         AppError.unauthorized("User record not found. Please complete onboarding.")
       );
     }
 
-    const membership = await Membership.findOne({
-      userId: user._id.toString(),
-      organizationId,
-    }).exec();
+    const membership = await prisma.membership.findUnique({
+      where: { userId_organizationId: { userId: user.id, organizationId } },
+    });
     if (!membership) {
       return next(AppError.forbidden("You are not a member of this organization"));
     }

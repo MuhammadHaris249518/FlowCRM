@@ -1,4 +1,4 @@
-import { Deal, Lead, Activity } from "../../models";
+import { prisma } from "../../lib/prisma";
 import type { AuthContext } from "../../middleware/auth";
 import type { DashboardSummaryQuery } from "./dashboard.validation";
 
@@ -41,61 +41,55 @@ type Window = { gte: Date; lt?: Date };
 
 export const dashboardRepository = {
   async getRevenue(auth: AuthContext, window: Window) {
-    const result = await Deal.aggregate([
-      { $match: { ...scopeFilter(auth), stage: "WON", closedAt: { ...window } } },
-      {
-        $group: {
-          _id: null,
-          totalValue: { $sum: "$value" },
-        },
-      },
-    ]);
-    return result[0]?.totalValue ?? 0;
+    const result = await prisma.deal.aggregate({
+      where: { ...scopeFilter(auth), stage: "WON", closedAt: window },
+      _sum: { value: true },
+    });
+    return Number(result._sum.value ?? 0);
   },
 
   async getNewLeadsCount(auth: AuthContext, window: Window) {
-    return Lead.countDocuments({ ...scopeFilter(auth), createdAt: window });
+    return prisma.lead.count({
+      where: { ...scopeFilter(auth), createdAt: window },
+    });
   },
 
   async getDealsWonCount(auth: AuthContext, window: Window) {
-    return Deal.countDocuments({ ...scopeFilter(auth), stage: "WON", closedAt: window });
+    return prisma.deal.count({
+      where: { ...scopeFilter(auth), stage: "WON", closedAt: window },
+    });
   },
 
   async getConversionRate(auth: AuthContext, window: Window) {
     const [totalLeads, convertedLeads] = await Promise.all([
-      Lead.countDocuments({ ...scopeFilter(auth), createdAt: window }),
-      Lead.countDocuments({ ...scopeFilter(auth), status: "CONVERTED", createdAt: window }),
+      prisma.lead.count({ where: { ...scopeFilter(auth), createdAt: window } }),
+      prisma.lead.count({
+        where: { ...scopeFilter(auth), status: "CONVERTED", createdAt: window },
+      }),
     ]);
     return totalLeads === 0 ? 0 : Number(((convertedLeads / totalLeads) * 100).toFixed(1));
   },
 
   async getPipelineByStage(auth: AuthContext) {
-    const deals = await Deal.aggregate([
-      { $match: scopeFilter(auth) },
-      {
-        $group: {
-          _id: "$stage",
-          dealCount: { $sum: 1 },
-          totalValue: { $sum: "$value" },
-        },
-      },
-    ]);
-    return deals.map((row: any) => ({
-      stage: row._id,
-      dealCount: row.dealCount,
-      totalValue: row.totalValue ?? 0,
+    const deals = await prisma.deal.groupBy({
+      by: ["stage"],
+      where: scopeFilter(auth),
+      _count: { _all: true },
+      _sum: { value: true },
+    });
+    return deals.map((row) => ({
+      stage: row.stage,
+      dealCount: row._count._all,
+      totalValue: Number(row._sum.value ?? 0),
     }));
   },
 
   async getRecentActivities(auth: AuthContext, limit: number) {
-    const activities = await Activity.find({ organizationId: auth.organizationId })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .populate("actor", "fullName")
-      .exec();
-    return activities.map((activity: any) => ({
-      ...activity.toObject(),
-      actor: activity.actor ? { fullName: activity.actor.fullName } : null,
-    }));
+    return prisma.activity.findMany({
+      where: { organizationId: auth.organizationId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      include: { actor: { select: { fullName: true } } },
+    });
   },
 };
