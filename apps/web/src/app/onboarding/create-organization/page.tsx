@@ -6,7 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import { Sparkles } from "lucide-react";
 import { authApi } from "@/features/auth/api/auth-api";
 import { useMe } from "@/features/auth/hooks/use-me";
-import { useActiveOrganization } from "@/features/auth/providers/ActiveOrganizationProvider";
+import { useActiveOrganization } from "@/features/auth/provider/ActiveOrganizationProvider";
 
 function slugify(value: string) {
   return value

@@ -18,26 +18,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  const clerkEnabled =
-    typeof publishableKey === "string" &&
-    publishableKey.length > 20 &&
-    publishableKey.startsWith("pk_") &&
-    !publishableKey.includes("placeholder") &&
-    !publishableKey.includes("your_key_here");
-
-  if (!clerkEnabled) {
-    return (
-      <html lang="en" className={inter.variable}>
-        <body>
-          <QueryProvider>
-            <ActiveOrganizationProvider>{children}</ActiveOrganizationProvider>
-          </QueryProvider>
-        </body>
-      </html>
-    );
-  }
-
   return (
     <ClerkProvider>
       <html lang="en" className={inter.variable}>
