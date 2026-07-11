@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useActiveOrganization } from "../providers/ActiveOrganizationProvider";
+import { useActiveOrganization } from "../provider/ActiveOrganizationProvider";
 import type { RequestContext } from "@/lib/api-client";
 
 export function useApiContext(): RequestContext {
