@@ -12,8 +12,83 @@ interface ApiEnvelope<T> {
   error?: { code: string; message: string };
 }
 
-// Every authenticated call needs a fresh Clerk token (they're short-lived)
-// and the active organization id — bundled here so hooks don't repeat it.
+function buildHeaders(): HeadersInit {
+  return {
+    "Content-Type": "application/json",
+    // TODO: inject Clerk session token once auth module lands
+    // Authorization: `Bearer ${await getToken()}`,
+    // TODO: inject X-Organization-Id from an org-context provider once the
+    // org-switcher UI exists — every CRM endpoint requires it (see auth.ts).
+  };
+}
+
+async function parseEnvelope<T>(res: Response): Promise<T> {
+  // DELETE returns 204 with no body — nothing to parse.
+  if (res.status === 204) return undefined as T;
+
+  const body: ApiEnvelope<T> = await res.json();
+
+  if (!res.ok || !body.success) {
+    throw new ApiError(
+      body.error?.code ?? "UNKNOWN_ERROR",
+      body.error?.message ?? "Something went wrong. Please try again.",
+      res.status
+    );
+  }
+
+  return body.data as T;
+}
+
+export async function apiGet<T>(path: string, params?: Record<string, string>): Promise<T> {
+  const url = new URL(`${API_BASE_URL}${path}`);
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+  }
+
+  const res = await fetch(url.toString(), {
+    headers: buildHeaders(),
+    credentials: "include",
+  });
+
+  return parseEnvelope<T>(res);
+}
+
+export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: buildHeaders(),
+    credentials: "include",
+    body: JSON.stringify(body),
+  });
+
+  return parseEnvelope<T>(res);
+}
+
+export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: "PATCH",
+    headers: buildHeaders(),
+    credentials: "include",
+    body: JSON.stringify(body),
+  });
+
+  return parseEnvelope<T>(res);
+}
+
+export async function apiDelete(path: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: "DELETE",
+    headers: buildHeaders(),
+    credentials: "include",
+  });
+
+  await parseEnvelope<void>(res);
+}
+
+// ============================================================================
+// Legacy context-based client (used by auth and dashboard modules)
+// ============================================================================
+
 export interface RequestContext {
   getToken: () => Promise<string | null>;
   organizationId?: string | null;
@@ -42,17 +117,7 @@ async function request<T>(
     credentials: "include",
   });
 
-  const body: ApiEnvelope<T> = await res.json();
-
-  if (!res.ok || !body.success || body.data === undefined) {
-    throw new ApiError(
-      body.error?.code ?? "UNKNOWN_ERROR",
-      body.error?.message ?? "Something went wrong. Please try again.",
-      res.status
-    );
-  }
-
-  return body.data;
+  return parseEnvelope<T>(res);
 }
 
 export const apiClient = {

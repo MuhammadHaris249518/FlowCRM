@@ -29,7 +29,7 @@ export function RequireOrganization({ children }: { children: React.ReactNode })
 
     if (!me.data) return; // still loading, or errored — handled in render below
 
-    if (me.data.organizations.length === 0) {
+    if (me.data?.organizations.length === 0) {
       router.replace("/onboarding/create-organization");
       return;
     }
@@ -37,9 +37,9 @@ export function RequireOrganization({ children }: { children: React.ReactNode })
     // Active org from localStorage (via ActiveOrganizationProvider) might be
     // stale — e.g. the user was removed from that org, or it's their first
     // load and nothing's set yet. Fall back to the first org /auth/me returns.
-    const stillValid = me.data.organizations.some((org) => org.id === activeOrganizationId);
+    const stillValid = me.data?.organizations.some((org) => org.id === activeOrganizationId);
     if (!activeOrganizationId || !stillValid) {
-      setActiveOrganizationId(me.data.organizations[0].id);
+      setActiveOrganizationId(me.data?.organizations[0]?.id || "");
     }
   }, [
     clerkLoaded,

@@ -26,4 +26,8 @@ export class AppError extends Error {
   static notFound(message = "Resource not found") {
     return new AppError(message, 404, "NOT_FOUND");
   }
+
+  static conflict(message: string, code = "CONFLICT") {
+    return new AppError(message, 409, code);
+  }
 }

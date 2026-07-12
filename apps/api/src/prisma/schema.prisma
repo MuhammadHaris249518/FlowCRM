@@ -9,6 +9,7 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
+
 enum Role {
   SUPER_ADMIN
   ORG_OWNER
@@ -72,21 +73,22 @@ model User {
   avatarUrl String?
   createdAt DateTime @default(now())
 
-  memberships    Membership[]
-  assignedLeads  Lead[]       @relation("LeadAssignee")
-  assignedDeals  Deal[]       @relation("DealAssignee")
-  tasks          Task[]
-  activities     Activity[]
+  memberships   Membership[]
+  assignedLeads Lead[]       @relation("LeadAssignee")
+  assignedDeals Deal[]       @relation("DealAssignee")
+  contactsOwned Contact[]    @relation("ContactOwner")
+  tasks         Task[]
+  activities    Activity[]
 
   @@index([email])
 }
 
 model Membership {
-  id             String       @id @default(cuid())
+  id             String   @id @default(cuid())
   role           Role
   userId         String
   organizationId String
-  createdAt      DateTime     @default(now())
+  createdAt      DateTime @default(now())
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -99,14 +101,18 @@ model Company {
   id             String   @id @default(cuid())
   name           String
   domain         String?
+  industry       String?
+  website        String?
   organizationId String
   createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   contacts     Contact[]
   deals        Deal[]
 
   @@index([organizationId])
+  @@index([organizationId, name])
 }
 
 model Contact {
@@ -114,16 +120,24 @@ model Contact {
   fullName       String
   email          String?
   phone          String?
+  title          String?
   organizationId String
   companyId      String?
+  ownerId        String?
   createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   company      Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  owner        User?        @relation("ContactOwner", fields: [ownerId], references: [id], onDelete: SetNull)
   leads        Lead[]
   deals        Deal[]
 
+  // Nulls are exempt from uniqueness in Postgres, so contacts without an
+  // email are unaffected — this only blocks true duplicate-email submissions.
+  @@unique([organizationId, email])
   @@index([organizationId])
+  @@index([organizationId, companyId])
 }
 
 model Lead {

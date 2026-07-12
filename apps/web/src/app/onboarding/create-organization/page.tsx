@@ -31,8 +31,8 @@ export default function CreateOrganizationPage() {
   // If the user already has a workspace (e.g. they refreshed this page after
   // creating one), skip straight to the dashboard.
   useEffect(() => {
-    if (me.data && me.data.organizations.length > 0) {
-      setActiveOrganizationId(me.data.organizations[0].id);
+    if (me.data?.organizations && me.data.organizations.length > 0) {
+      setActiveOrganizationId(me.data.organizations[0]?.id || "");
       router.replace("/dashboard");
     }
   }, [me.data, router, setActiveOrganizationId]);
