@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { ZodError } from "zod";
 import { AppError } from "../errors/app-error";
 
 // Every API error response follows this shape so the frontend can
@@ -13,6 +14,23 @@ export function errorHandler(
     return res.status(err.statusCode).json({
       success: false,
       error: { code: err.code, message: err.message },
+    });
+  }
+
+  // Zod validation errors (thrown by .parse() in *.validation.ts files)
+  // become a proper 400 with per-field detail, instead of falling through
+  // to the generic 500 path below.
+  if (err instanceof ZodError) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Invalid request data",
+        fields: err.issues.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
+        })),
+      },
     });
   }
 

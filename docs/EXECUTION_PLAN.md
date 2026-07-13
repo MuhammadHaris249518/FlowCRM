@@ -17,10 +17,10 @@ just "code-complete."
 | Module | Backend | Frontend | DB | Tests | Status |
 |---|---|---|---|---|---|
 | Homepage / Marketing | — | ✅ | — | ❌ | Done, navigation verified working |
-| Authentication | 🟡 stub | 🟡 cosmetic | ✅ modeled | ❌ | **Blocking dependency for everything below** |
-| Dashboard | ✅ | ✅ | ✅ modeled | ❌ | Code-complete, cannot run until Auth is real |
-| CRM | ❌ | ❌ | ✅ modeled | ❌ | Not started |
-| Lead Management | ❌ | ❌ | ✅ modeled | ❌ | Not started |
+| Authentication | ✅ | ✅ | ✅ modeled | ❌ | Real Clerk verification, org-on-signup, RBAC middleware all working end-to-end |
+| Dashboard | ✅ | ✅ | ✅ modeled | ❌ | Fully functional against live Auth |
+| CRM (Companies & Contacts) | ✅ | ✅ | ✅ modeled | ❌ | CRUD, search, pagination, rep-scoping done; live cross-role RBAC verification still pending |
+| Lead Management | ❌ | ❌ | ✅ modeled | ❌ | Not started — next up |
 | Sales Pipeline | ❌ | ❌ | ✅ modeled | ❌ | Not started |
 | Tasks / Calendar / Documents | ❌ | ❌ | 🟡 partial | ❌ | Not started |
 | Workflow Automation | ❌ | ❌ | ❌ | ❌ | Not started |
@@ -30,7 +30,7 @@ just "code-complete."
 | Integrations | ❌ | ❌ | ❌ | ❌ | Not started |
 | CI/CD, Docker, Deployment | ❌ | — | — | — | Not started |
 
-**Overall completion: ~13% of full SRS scope. ~22% of Phase 1 scope.**
+**Overall completion: ~25% of full SRS scope. ~40% of Phase 1 scope.**
 
 Legend: ✅ done and verified · 🟡 exists but incomplete/unverified · ❌ not started
 
@@ -199,7 +199,15 @@ A module is **not done** until all of the following are true:
 
 ## 6. Immediate Next Action
 
-Build **Phase 1A — Authentication** in full: Clerk wiring, org-creation-on-signup,
-invite flow, and real session verification replacing every `TODO` in
-`apps/api/src/middleware/auth.ts`. This unblocks Dashboard being genuinely
-functional and is the template every subsequent module reuses.
+Phase 1A (Auth) and Phase 1B (CRM: Companies & Contacts) are functionally
+complete. Two loose ends remain before Phase 1B is formally closed: a live
+manual RBAC verification (Sales Rep vs Manager/Owner contact visibility —
+not something an agent can perform, requires a human observing two test
+accounts) and tagging `phase-1b-complete` once that passes.
+
+Next build target: **Phase 1C — Lead Management**, following the exact same
+layered pattern (`routes → controller → service → repository`) established
+in Dashboard and CRM. Lead capture, assignment, status transitions
+(`NEW → CONTACTED → QUALIFIED → DISQUALIFIED/CONVERTED`), and the existing
+`Lead.score` field (AI scoring itself is Phase 4 — the field and UI exist
+now, the actual scoring logic comes later).
