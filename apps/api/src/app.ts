@@ -9,6 +9,7 @@ import { authRouter } from "./modules/auth/auth.routes";
 import { clerkWebhookRouter } from "./modules/auth/webhooks/clerk.webhook";
 import { crmRouter } from "./modules/crm/crm.routes";
 import { leadsRouter } from "./modules/leads/leads.routes";
+import { pipelineRouter } from "./modules/pipeline/pipeline.routes";
 
 export function createApp() {
   const app = express();
@@ -56,6 +57,7 @@ export function createApp() {
   app.use("/api/v1/dashboard", dashboardRouter);
   app.use("/api/v1/crm", crmRouter);
   app.use("/api/v1/leads", leadsRouter);
+  app.use("/api/v1/pipeline", pipelineRouter);
 
   // Must be registered last — Express matches error middleware by arity (4 args).
   app.use(errorHandler);
