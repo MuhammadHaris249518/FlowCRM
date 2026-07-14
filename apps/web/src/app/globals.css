@@ -18,3 +18,21 @@ body {
 .container-page {
   @apply mx-auto w-full max-w-7xl px-6 lg:px-8;
 }
+
+/* Thin, always-visible scrollbar for the pipeline board — the default
+   browser scrollbar is either invisible or too heavy; this keeps the
+   scroll affordance visible without being loud. */
+.board-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #a6aabd transparent;
+}
+.board-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.board-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.board-scroll::-webkit-scrollbar-thumb {
+  background-color: #a6aabd;
+  border-radius: 9999px;
+}
