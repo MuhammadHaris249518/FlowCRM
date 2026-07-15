@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { Check, Pencil, Plus, Search, Trash2 } from "lucide-react";
-import { useConvertLead, useDeleteLead, useLeads } from "../hooks/use-leads";
+import { useDeleteLead, useLeads } from "../hooks/use-leads";
 import { LeadFormDialog } from "./LeadFormDialog";
+import { ConvertLeadDialog } from "./ConvertLeadDialog";
 import type { Lead, LeadStatus } from "../types";
 
 const STATUS_OPTIONS: { value: LeadStatus | ""; label: string }[] = [
@@ -37,7 +38,6 @@ export function LeadsTable() {
     status: status || undefined,
   });
   const deleteLead = useDeleteLead();
-  const convertLead = useConvertLead();
 
   const totalPages = leads.data
     ? Math.max(1, Math.ceil(leads.data.total / leads.data.pageSize))
@@ -58,10 +58,8 @@ export function LeadsTable() {
     await deleteLead.mutateAsync(lead.id);
   };
 
-  const handleConvert = async (lead: Lead) => {
-    if (!window.confirm("Mark this lead as converted?")) return;
-    await convertLead.mutateAsync(lead.id);
-  };
+  const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
+  const handleConvert = (lead: Lead) => setConvertingLead(lead);
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-card">
@@ -202,6 +200,7 @@ export function LeadsTable() {
       )}
 
       <LeadFormDialog open={dialogOpen} onClose={() => setDialogOpen(false)} lead={dialogLead} />
+      <ConvertLeadDialog lead={convertingLead} onClose={() => setConvertingLead(null)} />
     </div>
   );
 }

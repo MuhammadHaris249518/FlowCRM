@@ -96,12 +96,30 @@ contact endpoints instead.
 
 ## POST /:id/convert
 
-Sets `status` to `CONVERTED`. Minimal for Phase 1C — does not yet create a
-`Deal`; that lands once the Pipeline module (Phase 1D) exists.
+Marks the lead `CONVERTED` and creates a linked `Deal` in stage `NEW`, in a
+single transaction. The deal carries over the lead's contact, the contact's
+company (if any), and the lead's assignee.
 
-**Response `200`**: the updated lead object.
+**Request body**
 
-**Errors:** `404 NOT_FOUND`.
+| Field     | Type   | Required | Notes                                              |
+| --------- | ------ | -------- | --------------------------------------------------- |
+| dealValue | number | Yes      | Deal value has no source on the Lead — must be supplied at conversion time. |
+| dealTitle | string | No       | Defaults to `"{Contact Name} — Deal"`.               |
+
+**Response `200`**
+
+```json
+{
+  "success": true,
+  "data": {
+    "lead": { "...": "updated lead, status CONVERTED" },
+    "deal": { "id": "clx...", "title": "Jane Doe — Deal", "value": 4200, "stage": "NEW" }
+  }
+}
+```
+
+**Errors:** `404 NOT_FOUND`, `400 BAD_REQUEST` (missing/invalid `dealValue`).
 
 ## Error envelope (all endpoints)
 

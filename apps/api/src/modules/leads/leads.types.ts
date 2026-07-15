@@ -18,3 +18,18 @@ export interface PaginatedDTO<T> {
   pageSize: number;
   total: number;
 }
+
+// Deliberately minimal, separate from pipeline.types.DealDTO — the leads
+// module shouldn't import from pipeline's types just to describe the
+// summary it returns after a conversion. Small duplication, zero coupling.
+export interface ConvertedDealSummaryDTO {
+  id: string;
+  title: string;
+  value: number;
+  stage: string;
+}
+
+export interface ConvertLeadResultDTO {
+  lead: LeadDTO;
+  deal: ConvertedDealSummaryDTO;
+}

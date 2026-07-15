@@ -46,3 +46,13 @@ export interface UpdateLeadInput {
   score?: number;
   assigneeId?: string;
 }
+
+export interface ConvertLeadInput {
+  dealTitle?: string;
+  dealValue: number;
+}
+
+export interface ConvertLeadResult {
+  lead: Lead;
+  deal: { id: string; title: string; value: number; stage: string };
+}

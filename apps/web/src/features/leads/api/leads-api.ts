@@ -5,6 +5,8 @@ import type {
   LeadQuery,
   Paginated,
   UpdateLeadInput,
+  ConvertLeadInput,
+  ConvertLeadResult,
 } from "../types";
 
 function toParams(query: Record<string, any>): Record<string, string> {
@@ -29,5 +31,6 @@ export const leadsApi = {
 
   delete: (ctx: RequestContext, id: string) => apiClient.delete(`/leads/${id}`, ctx),
 
-  convert: (ctx: RequestContext, id: string) => apiClient.post<Lead>(`/leads/${id}/convert`, ctx),
+  convert: (ctx: RequestContext, id: string, input: ConvertLeadInput) =>
+    apiClient.post<ConvertLeadResult>(`/leads/${id}/convert`, ctx, input),
 };

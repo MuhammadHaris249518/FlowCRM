@@ -1,8 +1,8 @@
 import { AppError } from "../../errors/app-error";
 import type { AuthContext } from "../../middleware/auth";
 import { leadsRepository } from "./leads.repository";
-import type { LeadDTO, PaginatedDTO } from "./leads.types";
-import type { CreateLeadInput, LeadQuery, UpdateLeadInput } from "./leads.validation";
+import type { LeadDTO, PaginatedDTO, ConvertLeadResultDTO } from "./leads.types";
+import type { CreateLeadInput, LeadQuery, UpdateLeadInput, ConvertLeadInput } from "./leads.validation";
 
 function toLeadDTO(lead: {
   id: string;
@@ -78,13 +78,25 @@ export const leadsService = {
     await leadsRepository.delete(auth, id);
   },
 
-  // Convert is intentionally minimal for Phase 1C: flips status to CONVERTED.
-  // Real Deal creation is Phase 1D territory (Pipeline module doesn't exist
-  // yet) — wiring this to actually create a Deal happens then, not now.
-  async convert(auth: AuthContext, id: string): Promise<LeadDTO> {
+  async convert(
+    auth: AuthContext,
+    id: string,
+    input: ConvertLeadInput
+  ): Promise<ConvertLeadResultDTO> {
     const exists = await leadsRepository.exists(auth, id);
     if (!exists) throw AppError.notFound("Lead not found");
-    const lead = await leadsRepository.update(auth, id, { status: "CONVERTED" });
-    return toLeadDTO(lead);
+
+    const result = await leadsRepository.convertToDeal(auth, id, input.dealTitle, input.dealValue);
+    if (!result) throw AppError.notFound("Lead not found");
+
+    return {
+      lead: toLeadDTO(result.lead),
+      deal: {
+        id: result.deal.id,
+        title: result.deal.title,
+        value: Number(result.deal.value),
+        stage: result.deal.stage,
+      },
+    };
   },
 };

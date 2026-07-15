@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { AppError } from "../../errors/app-error";
 import { leadsService } from "./leads.service";
-import { createLeadSchema, leadQuerySchema, updateLeadSchema } from "./leads.validation";
+import { createLeadSchema, leadQuerySchema, updateLeadSchema, convertLeadSchema } from "./leads.validation";
 
 export const leadsController = {
   async list(req: Request, res: Response) {
@@ -39,7 +39,8 @@ export const leadsController = {
 
   async convert(req: Request, res: Response) {
     if (!req.authContext) throw AppError.unauthorized();
-    const data = await leadsService.convert(req.authContext, req.params.id);
+    const input = convertLeadSchema.parse(req.body);
+    const data = await leadsService.convert(req.authContext, req.params.id, input);
     res.json({ success: true, data });
   },
 };

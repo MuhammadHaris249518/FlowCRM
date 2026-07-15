@@ -50,3 +50,13 @@ export const updateLeadSchema = z.object({
 export type LeadQuery = z.infer<typeof leadQuerySchema>;
 export type CreateLeadInput = z.infer<typeof createLeadSchema>;
 export type UpdateLeadInput = z.infer<typeof updateLeadSchema>;
+
+// dealTitle is optional — defaults to a sensible name derived from the
+// contact in the repository layer, since the lead's contact isn't known
+// at the validation layer.
+export const convertLeadSchema = z.object({
+  dealTitle: z.string().trim().min(1).max(200).optional(),
+  dealValue: z.coerce.number().min(0).max(999999999999.99),
+});
+
+export type ConvertLeadInput = z.infer<typeof convertLeadSchema>;

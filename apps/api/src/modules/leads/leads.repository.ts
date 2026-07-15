@@ -121,4 +121,48 @@ export const leadsRepository = {
   async delete(auth: AuthContext, id: string) {
     return prisma.lead.delete({ where: { id } });
   },
+
+  // Single transaction: update the lead to CONVERTED and create the linked
+  // Deal, so a crash mid-conversion can never leave a lead marked converted
+  // with no deal to show for it (or vice versa).
+  async convertToDeal(auth: AuthContext, id: string, dealTitle: string | undefined, dealValue: number) {
+    return prisma.$transaction(async (tx) => {
+      const lead = await tx.lead.findFirst({
+        where: { id, ...leadScopeFilter(auth) },
+        include: { contact: { select: { fullName: true, companyId: true } } },
+      });
+      if (!lead) return null;
+
+      const updatedLead = await tx.lead.update({
+        where: { id },
+        data: { status: "CONVERTED" },
+        include: leadInclude,
+      });
+
+      const deal = await tx.deal.create({
+        data: {
+          organizationId: auth.organizationId,
+          title: dealTitle?.trim() || `${lead.contact?.fullName ?? "New Lead"} — Deal`,
+          value: dealValue,
+          stage: "NEW",
+          contactId: lead.contactId,
+          companyId: lead.contact?.companyId ?? null,
+          assigneeId: lead.assigneeId,
+        },
+      });
+
+      // Reuses DEAL_STAGE_CHANGED rather than adding a DEAL_CREATED enum
+      // value — same deliberate deferral noted when Pipeline was built.
+      await tx.activity.create({
+        data: {
+          organizationId: auth.organizationId,
+          type: "DEAL_STAGE_CHANGED",
+          message: `Deal "${deal.title}" created from converted lead, entering New`,
+          actorId: auth.userId,
+        },
+      });
+
+      return { lead: updatedLead, deal };
+    });
+  },
 };
