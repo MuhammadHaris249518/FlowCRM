@@ -88,14 +88,14 @@ export function PipelineBoard() {
         </div>
       </div>
 
-      <div className="relative">
+      <div className="relative -mx-6 sm:-mx-8">
         {/* Edge fades hint there's more to scroll to — purely visual, non-interactive */}
         <div
-          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-surface-muted to-transparent"
+          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 sm:w-8 bg-gradient-to-r from-surface-muted to-transparent"
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-surface-muted to-transparent"
+          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 sm:w-8 bg-gradient-to-l from-surface-muted to-transparent"
           aria-hidden
         />
 
@@ -104,6 +104,9 @@ export function PipelineBoard() {
           className="board-scroll flex gap-3 overflow-x-auto pb-4 scroll-smooth"
           style={{ scrollSnapType: "x proximity" }}
         >
+          {/* Spacer to keep the first column out from under the left fade when scrolled all the way left */}
+          <div className="w-3 sm:w-5 shrink-0" aria-hidden />
+
           {board.data?.stages.map((column) => {
             const meta = STAGE_META[column.stage];
             const isClosed = column.stage === "WON" || column.stage === "LOST";
@@ -170,6 +173,9 @@ export function PipelineBoard() {
               </div>
             );
           })}
+
+          {/* Spacer to keep the last column out from under the right fade when scrolled all the way right. Guaranteed cross-browser unlike padding-right on a flex container. */}
+          <div className="w-3 sm:w-5 shrink-0" aria-hidden />
         </div>
       </div>
 
