@@ -164,6 +164,10 @@ export const crmService = {
     const existing = await crmRepository.getContactById(auth, id);
     if (!existing) throw AppError.notFound("Contact not found");
 
+    if (input.ownerId && auth.role === "SALES_REP" && input.ownerId !== auth.userId) {
+      throw AppError.forbidden("Sales reps cannot reassign contacts to other users");
+    }
+
     if (input.companyId) {
       const companyExists = await crmRepository.companyExists(auth, input.companyId);
       if (!companyExists) throw AppError.badRequest("companyId does not exist in your organization");
