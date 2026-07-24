@@ -93,6 +93,14 @@ function CreateLeadForm({ onClose }: { onClose: () => void }) {
           placeholder="Website Form"
         />
       </Field>
+      <Field label="Notes" error={errors.notes?.message}>
+        <textarea
+          {...register("notes")}
+          rows={3}
+          className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
+          placeholder="Budget, timeline, anything relevant..."
+        />
+      </Field>
 
       <div className="flex justify-end gap-2 pt-2">
         <button
@@ -125,6 +133,7 @@ function EditLeadForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
     defaultValues: {
       status: lead.status,
       source: lead.source ?? "",
+      notes: lead.notes ?? "",
       score: lead.score,
     },
   });
@@ -157,6 +166,14 @@ function EditLeadForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
           {...register("source")}
           className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
           placeholder="Website Form"
+        />
+      </Field>
+      <Field label="Notes" error={errors.notes?.message}>
+        <textarea
+          {...register("notes")}
+          rows={3}
+          className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
+          placeholder="Budget, timeline, anything relevant..."
         />
       </Field>
       <Field label="Score (0-100)" error={errors.score?.message}>

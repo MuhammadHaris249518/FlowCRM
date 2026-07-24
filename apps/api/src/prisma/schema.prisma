@@ -151,6 +151,8 @@ model Lead {
   id             String     @id @default(cuid())
   status         LeadStatus @default(NEW)
   source         String? // e.g. "Website Form", "Referral"
+  notes          String? // free-text context — budget, timeline, anything a rep
+  // typed in; this is what AI scoring reads once that's built
   score          Int        @default(0) // AI qualification score 0-100
   organizationId String
   contactId      String?

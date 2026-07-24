@@ -29,6 +29,7 @@ export const createLeadSchema = z
     contactEmail: z.string().trim().email("Must be a valid email").optional(),
     contactPhone: z.string().trim().max(30).optional(),
     source: z.string().trim().max(100).optional(),
+    notes: z.string().trim().max(2000).optional(),
     status: leadStatusEnum.optional(),
     score: z.coerce.number().int().min(0).max(100).optional(),
     assigneeId: z.string().cuid().optional(),
@@ -43,6 +44,7 @@ export const createLeadSchema = z
 export const updateLeadSchema = z.object({
   status: leadStatusEnum.optional(),
   source: z.string().trim().max(100).optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
   score: z.coerce.number().int().min(0).max(100).optional(),
   assigneeId: z.string().cuid().optional(),
 });

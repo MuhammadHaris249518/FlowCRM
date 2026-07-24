@@ -13,6 +13,7 @@ export const createLeadFormSchema = z.object({
   contactEmail: z.string().trim().email("Must be a valid email").optional().or(z.literal("")),
   contactPhone: z.string().trim().max(30).optional().or(z.literal("")),
   source: z.string().trim().max(100).optional().or(z.literal("")),
+  notes: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
 export type CreateLeadFormValues = z.infer<typeof createLeadFormSchema>;
@@ -20,6 +21,7 @@ export type CreateLeadFormValues = z.infer<typeof createLeadFormSchema>;
 export const editLeadFormSchema = z.object({
   status: z.enum(LEAD_STATUSES),
   source: z.string().trim().max(100).optional().or(z.literal("")),
+  notes: z.string().trim().max(2000).optional().or(z.literal("")),
   score: z.coerce.number().int().min(0).max(100),
 });
 

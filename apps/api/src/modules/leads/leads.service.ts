@@ -8,6 +8,7 @@ function toLeadDTO(lead: {
   id: string;
   status: string;
   source: string | null;
+  notes: string | null;
   score: number;
   contactId: string | null;
   contact?: { fullName: string; email: string | null } | null;
@@ -20,6 +21,7 @@ function toLeadDTO(lead: {
     id: lead.id,
     status: lead.status as LeadDTO["status"],
     source: lead.source,
+    notes: lead.notes,
     score: lead.score,
     contactId: lead.contactId,
     contactName: lead.contact?.fullName ?? null,

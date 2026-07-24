@@ -4,6 +4,7 @@ export interface Lead {
   id: string;
   status: LeadStatus;
   source: string | null;
+  notes: string | null;
   score: number;
   contactId: string | null;
   contactName: string | null;
@@ -35,6 +36,7 @@ export interface CreateLeadInput {
   contactEmail?: string;
   contactPhone?: string;
   source?: string;
+  notes?: string;
   status?: LeadStatus;
   score?: number;
   assigneeId?: string;
@@ -43,6 +45,7 @@ export interface CreateLeadInput {
 export interface UpdateLeadInput {
   status?: LeadStatus;
   source?: string;
+  notes?: string | null;
   score?: number;
   assigneeId?: string;
 }

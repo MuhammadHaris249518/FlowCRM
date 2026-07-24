@@ -2,6 +2,7 @@ export interface LeadDTO {
   id: string;
   status: "NEW" | "CONTACTED" | "QUALIFIED" | "DISQUALIFIED" | "CONVERTED";
   source: string | null;
+  notes: string | null;
   score: number;
   contactId: string | null;
   contactName: string | null;
