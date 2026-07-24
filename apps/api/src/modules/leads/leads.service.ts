@@ -1,5 +1,6 @@
 import { AppError } from "../../errors/app-error";
 import type { AuthContext } from "../../middleware/auth";
+import { aiServiceClient } from "../../lib/ai-service-client";
 import { leadsRepository } from "./leads.repository";
 import type { LeadDTO, PaginatedDTO, ConvertLeadResultDTO } from "./leads.types";
 import type { CreateLeadInput, LeadQuery, UpdateLeadInput, ConvertLeadInput } from "./leads.validation";
@@ -78,6 +79,43 @@ export const leadsService = {
     const exists = await leadsRepository.exists(auth, id);
     if (!exists) throw AppError.notFound("Lead not found");
     await leadsRepository.delete(auth, id);
+  },
+
+  async scoreWithAi(auth: AuthContext, id: string): Promise<LeadDTO> {
+    const lead = await leadsRepository.getForScoring(auth, id);
+    if (!lead) throw AppError.notFound("Lead not found");
+
+    const daysSinceCreated = Math.floor(
+      (Date.now() - lead.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    let result;
+    try {
+      result = await aiServiceClient.scoreLead({
+        source: lead.source,
+        notes: lead.notes,
+        status: lead.status,
+        daysSinceCreated,
+        contact: lead.contact
+          ? {
+              hasFullName: Boolean(lead.contact.fullName),
+              hasEmail: Boolean(lead.contact.email),
+              hasPhone: Boolean(lead.contact.phone),
+              companyName: lead.contact.company?.name ?? null,
+              companyDomain: lead.contact.company?.domain ?? null,
+            }
+          : null,
+      });
+    } catch {
+      throw new AppError(
+        "AI scoring is temporarily unavailable. Try again in a moment.",
+        503,
+        "AI_SERVICE_UNAVAILABLE"
+      );
+    }
+
+    const updated = await leadsRepository.updateScore(auth, id, result.score, result.reasoning);
+    return toLeadDTO(updated);
   },
 
   async convert(

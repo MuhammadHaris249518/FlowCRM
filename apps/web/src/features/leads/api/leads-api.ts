@@ -33,4 +33,7 @@ export const leadsApi = {
 
   convert: (ctx: RequestContext, id: string, input: ConvertLeadInput) =>
     apiClient.post<ConvertLeadResult>(`/leads/${id}/convert`, ctx, input),
+
+  scoreWithAi: (ctx: RequestContext, id: string) =>
+    apiClient.post<Lead>(`/leads/${id}/score`, ctx),
 };

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Pencil, Plus, Search, Trash2 } from "lucide-react";
-import { useDeleteLead, useLeads } from "../hooks/use-leads";
+import { Check, Pencil, Plus, Search, Sparkles, Trash2 } from "lucide-react";
+import { useDeleteLead, useLeads, useScoreLead } from "../hooks/use-leads";
 import { LeadFormDialog } from "./LeadFormDialog";
 import { ConvertLeadDialog } from "./ConvertLeadDialog";
 import type { Lead, LeadStatus } from "../types";
@@ -38,6 +38,17 @@ export function LeadsTable() {
     status: status || undefined,
   });
   const deleteLead = useDeleteLead();
+  const scoreLead = useScoreLead();
+  const [scoringLeadId, setScoringLeadId] = useState<string | null>(null);
+
+  const handleScore = async (lead: Lead) => {
+    setScoringLeadId(lead.id);
+    try {
+      await scoreLead.mutateAsync(lead.id);
+    } finally {
+      setScoringLeadId(null);
+    }
+  };
 
   const totalPages = leads.data
     ? Math.max(1, Math.ceil(leads.data.total / leads.data.pageSize))
@@ -145,6 +156,14 @@ export function LeadsTable() {
                   <td className="py-3 text-ink-500">{lead.assigneeName ?? "Unassigned"}</td>
                   <td className="py-3">
                     <div className="flex justify-end gap-3">
+                      <button
+                        onClick={() => handleScore(lead)}
+                        disabled={scoringLeadId === lead.id}
+                        aria-label="Score with AI"
+                        className="text-ink-300 hover:text-brand-500 disabled:opacity-40"
+                      >
+                        <Sparkles className="h-4 w-4" aria-hidden />
+                      </button>
                       {lead.status !== "CONVERTED" && (
                         <button
                           onClick={() => handleConvert(lead)}

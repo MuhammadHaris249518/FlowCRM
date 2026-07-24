@@ -27,6 +27,8 @@ contracts.
 | Communication Hub | ❌ | ❌ | — | — | Not started |
 | Reports (dedicated module) | ❌ | ❌ | — | — | Not started; Dashboard currently covers headline stats only |
 | Documents | ❌ | ❌ | — | — | Not modeled |
+
+
 | Integrations | ❌ | ❌ | — | — | Not started |
 | CI/CD, Docker, Deployment | ❌ | — | — | — | Not started |
 

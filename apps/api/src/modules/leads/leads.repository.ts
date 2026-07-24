@@ -68,6 +68,25 @@ export const leadsRepository = {
     return Boolean(lead);
   },
 
+  // Separate from getById's leadInclude — scoring needs company context
+  // that the normal list/detail views don't, so this stays a dedicated
+  // query rather than bloating leadInclude for every other endpoint.
+  async getForScoring(auth: AuthContext, id: string) {
+    return prisma.lead.findFirst({
+      where: { id, ...leadScopeFilter(auth) },
+      include: {
+        contact: {
+          select: {
+            fullName: true,
+            email: true,
+            phone: true,
+            company: { select: { name: true, domain: true } },
+          },
+        },
+      },
+    });
+  },
+
   async contactExists(auth: AuthContext, contactId: string) {
     const contact = await prisma.contact.findFirst({
       where: { id: contactId, organizationId: auth.organizationId },
@@ -120,6 +139,27 @@ export const leadsRepository = {
 
   async delete(auth: AuthContext, id: string) {
     return prisma.lead.delete({ where: { id } });
+  },
+
+  async updateScore(auth: AuthContext, id: string, score: number, reasoning: string) {
+    return prisma.$transaction(async (tx) => {
+      const lead = await tx.lead.update({
+        where: { id },
+        data: { score },
+        include: leadInclude,
+      });
+
+      await tx.activity.create({
+        data: {
+          organizationId: auth.organizationId,
+          type: "AI_LEAD_SCORED",
+          message: `AI scored "${lead.contact?.fullName ?? "this lead"}" at ${score}/100 — ${reasoning}`,
+          actorId: auth.userId,
+        },
+      });
+
+      return lead;
+    });
   },
 
   // Single transaction: update the lead to CONVERTED and create the linked

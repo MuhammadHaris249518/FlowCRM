@@ -13,3 +13,4 @@ leadsRouter.get("/:id", asyncHandler(leadsController.getById));
 leadsRouter.patch("/:id", asyncHandler(leadsController.update));
 leadsRouter.delete("/:id", asyncHandler(leadsController.delete));
 leadsRouter.post("/:id/convert", asyncHandler(leadsController.convert));
+leadsRouter.post("/:id/score", asyncHandler(leadsController.scoreWithAi));

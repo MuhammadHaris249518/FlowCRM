@@ -121,6 +121,17 @@ company (if any), and the lead's assignee.
 
 **Errors:** `404 NOT_FOUND`, `400 BAD_REQUEST` (missing/invalid `dealValue`).
 
+## POST /:id/score
+
+Sends the lead's source, notes, contact completeness, and company signal to
+the AI service, gets back a 0–100 score + one-sentence reasoning, persists
+both, and logs an `AI_LEAD_SCORED` Activity — same transactional pattern as
+`/convert`.
+
+**Response `200`**: the full updated lead object.
+
+**Errors:** `404 NOT_FOUND` · `503 AI_SERVICE_UNAVAILABLE` if `ai-service` is unreachable.
+
 ## Error envelope (all endpoints)
 
 ```json

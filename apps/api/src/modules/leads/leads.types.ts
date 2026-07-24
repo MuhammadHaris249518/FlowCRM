@@ -2,7 +2,6 @@ export interface LeadDTO {
   id: string;
   status: "NEW" | "CONTACTED" | "QUALIFIED" | "DISQUALIFIED" | "CONVERTED";
   source: string | null;
-  notes: string | null;
   score: number;
   contactId: string | null;
   contactName: string | null;
@@ -11,6 +10,7 @@ export interface LeadDTO {
   assigneeName: string | null;
   createdAt: string;
   updatedAt: string;
+  notes: string | null;
 }
 
 export interface PaginatedDTO<T> {

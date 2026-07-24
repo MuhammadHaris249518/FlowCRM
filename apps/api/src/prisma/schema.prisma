@@ -44,6 +44,7 @@ enum ActivityType {
   DEAL_STAGE_CHANGED
   NOTE_ADDED
   TASK_COMPLETED
+  AI_LEAD_SCORED
 }
 
 enum TaskPriority {

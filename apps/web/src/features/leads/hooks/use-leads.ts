@@ -40,6 +40,15 @@ export function useDeleteLead() {
   });
 }
 
+export function useScoreLead() {
+  const queryClient = useQueryClient();
+  const ctx = useApiContext();
+  return useMutation({
+    mutationFn: (id: string) => leadsApi.scoreWithAi(ctx, id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leads"] }),
+  });
+}
+
 export function useConvertLead() {
   const queryClient = useQueryClient();
   const ctx = useApiContext();

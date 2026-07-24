@@ -37,6 +37,12 @@ export const leadsController = {
     res.status(204).send();
   },
 
+  async scoreWithAi(req: Request, res: Response) {
+    if (!req.authContext) throw AppError.unauthorized();
+    const data = await leadsService.scoreWithAi(req.authContext, req.params.id);
+    res.json({ success: true, data });
+  },
+
   async convert(req: Request, res: Response) {
     if (!req.authContext) throw AppError.unauthorized();
     const input = convertLeadSchema.parse(req.body);
