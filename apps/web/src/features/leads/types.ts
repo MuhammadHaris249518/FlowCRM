@@ -59,3 +59,9 @@ export interface ConvertLeadResult {
   lead: Lead;
   deal: { id: string; title: string; value: number; stage: string };
 }
+
+export interface ScoreLeadResult {
+  lead: Lead;
+  reasoning: string;
+}
+

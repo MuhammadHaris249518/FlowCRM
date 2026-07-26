@@ -60,7 +60,8 @@ describe("Lead AI scoring", () => {
       .set(authHeaders(rep, ctx.organizationId));
 
     expect(res.status).toBe(200);
-    expect(res.body.data.score).toBe(72);
+    expect(res.body.data.lead.score).toBe(72);
+    expect(res.body.data.reasoning).toBe("Referral source with complete contact details.");
 
     const updated = await prisma.lead.findUnique({ where: { id: lead.id } });
     expect(updated?.score).toBe(72);

@@ -128,7 +128,14 @@ the AI service, gets back a 0–100 score + one-sentence reasoning, persists
 both, and logs an `AI_LEAD_SCORED` Activity — same transactional pattern as
 `/convert`.
 
-**Response `200`**: the full updated lead object.
+**Response `200`**
+
+```json
+{
+  "lead": { "...": "full updated lead object, same shape as GET /:id" },
+  "reasoning": "Clear bulk order with budget and timeline, referral source, complete contact info."
+}
+```
 
 **Errors:** `404 NOT_FOUND` · `503 AI_SERVICE_UNAVAILABLE` if `ai-service` is unreachable.
 

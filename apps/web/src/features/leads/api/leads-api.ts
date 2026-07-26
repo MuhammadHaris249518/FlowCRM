@@ -7,6 +7,7 @@ import type {
   UpdateLeadInput,
   ConvertLeadInput,
   ConvertLeadResult,
+  ScoreLeadResult,
 } from "../types";
 
 function toParams(query: Record<string, any>): Record<string, string> {
@@ -35,5 +36,5 @@ export const leadsApi = {
     apiClient.post<ConvertLeadResult>(`/leads/${id}/convert`, ctx, input),
 
   scoreWithAi: (ctx: RequestContext, id: string) =>
-    apiClient.post<Lead>(`/leads/${id}/score`, ctx),
+    apiClient.post<ScoreLeadResult>(`/leads/${id}/score`, ctx),
 };

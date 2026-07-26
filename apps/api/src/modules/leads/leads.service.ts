@@ -2,7 +2,7 @@ import { AppError } from "../../errors/app-error";
 import type { AuthContext } from "../../middleware/auth";
 import { aiServiceClient } from "../../lib/ai-service-client";
 import { leadsRepository } from "./leads.repository";
-import type { LeadDTO, PaginatedDTO, ConvertLeadResultDTO } from "./leads.types";
+import type { LeadDTO, PaginatedDTO, ConvertLeadResultDTO, ScoreLeadResultDTO } from "./leads.types";
 import type { CreateLeadInput, LeadQuery, UpdateLeadInput, ConvertLeadInput } from "./leads.validation";
 
 function toLeadDTO(lead: {
@@ -81,7 +81,7 @@ export const leadsService = {
     await leadsRepository.delete(auth, id);
   },
 
-  async scoreWithAi(auth: AuthContext, id: string): Promise<LeadDTO> {
+  async scoreWithAi(auth: AuthContext, id: string): Promise<ScoreLeadResultDTO> {
     const lead = await leadsRepository.getForScoring(auth, id);
     if (!lead) throw AppError.notFound("Lead not found");
 
@@ -115,7 +115,7 @@ export const leadsService = {
     }
 
     const updated = await leadsRepository.updateScore(auth, id, result.score, result.reasoning);
-    return toLeadDTO(updated);
+    return { lead: toLeadDTO(updated), reasoning: result.reasoning };
   },
 
   async convert(

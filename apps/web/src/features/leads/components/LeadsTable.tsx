@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, Pencil, Plus, Search, Sparkles, Trash2 } from "lucide-react";
+import { ApiError } from "@/lib/api-client";
 import { useDeleteLead, useLeads, useScoreLead } from "../hooks/use-leads";
 import { LeadFormDialog } from "./LeadFormDialog";
 import { ConvertLeadDialog } from "./ConvertLeadDialog";
@@ -40,11 +41,20 @@ export function LeadsTable() {
   const deleteLead = useDeleteLead();
   const scoreLead = useScoreLead();
   const [scoringLeadId, setScoringLeadId] = useState<string | null>(null);
+  const [scoreReasoning, setScoreReasoning] = useState<Record<string, string>>({});
+  const [scoreError, setScoreError] = useState<Record<string, string>>({});
 
   const handleScore = async (lead: Lead) => {
     setScoringLeadId(lead.id);
+    setScoreError((prev) => ({ ...prev, [lead.id]: "" }));
     try {
-      await scoreLead.mutateAsync(lead.id);
+      const result = await scoreLead.mutateAsync(lead.id);
+      setScoreReasoning((prev) => ({ ...prev, [lead.id]: result.reasoning }));
+    } catch (err) {
+      setScoreError((prev) => ({
+        ...prev,
+        [lead.id]: err instanceof ApiError ? err.message : "AI scoring failed. Try again.",
+      }));
     } finally {
       setScoringLeadId(null);
     }
@@ -152,7 +162,17 @@ export function LeadsTable() {
                     </span>
                   </td>
                   <td className="py-3 text-ink-500">{lead.source ?? "—"}</td>
-                  <td className="py-3 text-ink-500">{lead.score}</td>
+                  <td className="py-3 text-ink-500">
+                    <span
+                      title={scoreReasoning[lead.id] || undefined}
+                      className={scoreReasoning[lead.id] ? "cursor-help underline decoration-dotted decoration-ink-300" : undefined}
+                    >
+                      {lead.score}
+                    </span>
+                    {scoreError[lead.id] && (
+                      <div className="mt-0.5 text-[11px] text-red-600">{scoreError[lead.id]}</div>
+                    )}
+                  </td>
                   <td className="py-3 text-ink-500">{lead.assigneeName ?? "Unassigned"}</td>
                   <td className="py-3">
                     <div className="flex justify-end gap-3">
@@ -160,9 +180,13 @@ export function LeadsTable() {
                         onClick={() => handleScore(lead)}
                         disabled={scoringLeadId === lead.id}
                         aria-label="Score with AI"
+                        title="Score with AI"
                         className="text-ink-300 hover:text-brand-500 disabled:opacity-40"
                       >
-                        <Sparkles className="h-4 w-4" aria-hidden />
+                        <Sparkles
+                          className={`h-4 w-4 ${scoringLeadId === lead.id ? "animate-spin" : ""}`}
+                          aria-hidden
+                        />
                       </button>
                       {lead.status !== "CONVERTED" && (
                         <button

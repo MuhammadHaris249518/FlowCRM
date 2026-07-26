@@ -34,3 +34,9 @@ export interface ConvertLeadResultDTO {
   lead: LeadDTO;
   deal: ConvertedDealSummaryDTO;
 }
+
+export interface ScoreLeadResultDTO {
+  lead: LeadDTO;
+  reasoning: string;
+}
+
