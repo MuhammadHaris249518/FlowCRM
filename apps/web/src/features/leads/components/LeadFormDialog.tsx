@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal } from "@/components/shared/Modal";
@@ -46,6 +48,7 @@ export function LeadFormDialog({
 
 function CreateLeadForm({ onClose }: { onClose: () => void }) {
   const createLead = useCreateLead();
+  const [apiError, setApiError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -57,10 +60,15 @@ function CreateLeadForm({ onClose }: { onClose: () => void }) {
   });
 
   const onSubmit = async (values: CreateLeadFormValues) => {
-    const payload = stripEmpty(values);
-    await createLead.mutateAsync(payload as CreateLeadFormValues & { contactFullName: string });
-    reset();
-    onClose();
+    setApiError(null);
+    try {
+      const payload = stripEmpty(values);
+      await createLead.mutateAsync(payload as CreateLeadFormValues & { contactFullName: string });
+      reset();
+      onClose();
+    } catch (err: any) {
+      setApiError(err?.message || "Failed to create lead. Try again.");
+    }
   };
 
   return (
@@ -102,6 +110,12 @@ function CreateLeadForm({ onClose }: { onClose: () => void }) {
         />
       </Field>
 
+      {apiError && (
+        <div className="rounded-lg bg-red-50 p-3 text-xs font-medium text-red-700">
+          {apiError}
+        </div>
+      )}
+
       <div className="flex justify-end gap-2 pt-2">
         <button
           type="button"
@@ -124,6 +138,7 @@ function CreateLeadForm({ onClose }: { onClose: () => void }) {
 
 function EditLeadForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
   const updateLead = useUpdateLead(lead.id);
+  const [apiError, setApiError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -139,9 +154,14 @@ function EditLeadForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
   });
 
   const onSubmit = async (values: EditLeadFormValues) => {
-    const payload = stripEmpty(values);
-    await updateLead.mutateAsync(payload);
-    onClose();
+    setApiError(null);
+    try {
+      const payload = stripEmpty(values);
+      await updateLead.mutateAsync(payload);
+      onClose();
+    } catch (err: any) {
+      setApiError(err?.message || "Failed to update lead. Try again.");
+    }
   };
 
   return (
@@ -185,6 +205,12 @@ function EditLeadForm({ lead, onClose }: { lead: Lead; onClose: () => void }) {
           className="w-full rounded-lg border border-surface-border px-3 py-2 text-sm"
         />
       </Field>
+
+      {apiError && (
+        <div className="rounded-lg bg-red-50 p-3 text-xs font-medium text-red-700">
+          {apiError}
+        </div>
+      )}
 
       <div className="flex justify-end gap-2 pt-2">
         <button
