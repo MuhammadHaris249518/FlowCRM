@@ -50,10 +50,12 @@ export function LeadsTable() {
     try {
       const result = await scoreLead.mutateAsync(lead.id);
       setScoreReasoning((prev) => ({ ...prev, [lead.id]: result.reasoning }));
-    } catch (err) {
+    } catch (err: any) {
+      const errorMessage =
+        err?.message || (err instanceof ApiError ? err.message : "AI scoring failed. Try again.");
       setScoreError((prev) => ({
         ...prev,
-        [lead.id]: err instanceof ApiError ? err.message : "AI scoring failed. Try again.",
+        [lead.id]: errorMessage,
       }));
     } finally {
       setScoringLeadId(null);

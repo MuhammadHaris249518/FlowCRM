@@ -1,4 +1,5 @@
 import { AppError } from "../../errors/app-error";
+import { Prisma } from "@prisma/client";
 import type { AuthContext } from "../../middleware/auth";
 import { aiServiceClient } from "../../lib/ai-service-client";
 import { leadsRepository } from "./leads.repository";
@@ -56,8 +57,15 @@ export const leadsService = {
       const exists = await leadsRepository.contactExists(auth, input.contactId);
       if (!exists) throw AppError.badRequest("contactId does not exist in your organization");
     }
-    const lead = await leadsRepository.create(auth, input);
-    return toLeadDTO(lead);
+    try {
+      const lead = await leadsRepository.create(auth, input);
+      return toLeadDTO(lead);
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        throw AppError.conflict("A contact with this email already exists in your organization");
+      }
+      throw err;
+    }
   },
 
   async update(auth: AuthContext, id: string, input: UpdateLeadInput): Promise<LeadDTO> {
