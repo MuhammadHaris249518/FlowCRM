@@ -40,6 +40,14 @@ apps/api/src/prisma/migrations/
 # Docker
 docker/data/
 
+# Python (apps/ai-service)
+apps/ai-service/venv/
+apps/ai-service/**/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
 # Misc
 *.tsbuildinfo
 next-env.d.ts
