@@ -114,7 +114,7 @@ Integration tests in `tests/integration/leads.scoring.test.ts`.
   - `CONDITION`: Filter/branch on entity attributes or past step outputs.
   - `DELAY`: Durable pause ("wait N hours/days" using scheduler queue).
   - `ACTION_STATIC`: Fixed actions executed by Node (e.g. `SEND_EMAIL_TEMPLATE`, `CREATE_TASK`, `UPDATE_LEAD_STATUS`, `SEND_SLACK_WEBHOOK`).
-  - `ACTION_AI`: AI-driven steps calling `apps/ai-service` (e.g. `AI_DRAFT_EMAIL`, `AI_DECIDE_ESCALATION`, `AI_SUMMARIZE_LEAD`). LangGraph handles multi-step LLM reasoning statelessly; Node persists the result and executes downstream actions.
+  - `ACTION_AI`: AI-driven steps calling `apps/ai-service` (e.g. `AI_DRAFT_EMAIL`, `AI_DECIDE_ESCALATION`, `AI_SUMMARIZE_LEAD`). Supports **LangGraph Evaluator Loops** (Draft Agent → Evaluator Agent → Conditional Rewrite if score < 8/10 → Finalize). LangGraph handles multi-step LLM reasoning statelessly; Node persists the result and executes downstream actions.
 - **Connectors**: Direct Python/Node integration functions (Slack Webhooks, Twilio SMS, SMTP/SendGrid) eliminating external n8n dependencies while avoiding binary 2-way DB syncs.
 - **Frontend UI**: Visual DAG workflow builder (React Flow or custom node-graph), workflow run history execution logs, trigger configuration modal.
 
