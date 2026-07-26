@@ -114,9 +114,32 @@ Integration tests in `tests/integration/leads.scoring.test.ts`.
   - `CONDITION`: Filter/branch on entity attributes or past step outputs.
   - `DELAY`: Durable pause ("wait N hours/days" using scheduler queue).
   - `ACTION_STATIC`: Fixed actions executed by Node (e.g. `SEND_EMAIL_TEMPLATE`, `CREATE_TASK`, `UPDATE_LEAD_STATUS`, `SEND_SLACK_WEBHOOK`).
-  - `ACTION_AI`: AI-driven steps calling `apps/ai-service` (e.g. `AI_DRAFT_EMAIL`, `AI_DECIDE_ESCALATION`, `AI_SUMMARIZE_LEAD`). LangGraph handles multi-step LLM reasoning statelessly; Node persists the result and executes downstream actions.
+  - `ACTION_AI`: AI-driven steps calling `apps/ai-service` (e.g. `AI_DRAFT_EMAIL`,
+    `AI_DECIDE_ESCALATION`, `AI_SUMMARIZE_LEAD`). Supports **LangGraph Evaluator
+    Loops** (Draft Agent → Evaluator Agent → Conditional Rewrite if score < 8/10
+    → Finalize). **Executes asynchronously**: Node calls `ai-service`, receives
+    a job id immediately, and the `WorkflowRun` moves to `WAITING` state — the
+    same resume mechanism used by the `DELAY` node type, not a blocking HTTP
+    call held open inside the state machine. A webhook or poll from
+    `ai-service` resolves the run once the loop finishes.
 - **Connectors**: Direct Python/Node integration functions (Slack Webhooks, Twilio SMS, SMTP/SendGrid) eliminating external n8n dependencies while avoiding binary 2-way DB syncs.
 - **Frontend UI**: Visual DAG workflow builder (React Flow or custom node-graph), workflow run history execution logs, trigger configuration modal.
+
+#### Key Design Decisions — AI-driven Actions (locked in before implementation)
+
+1. **AI-drafted content is always human-approved, never auto-sent (v1).**
+   `AI_DRAFT_EMAIL` and similar `ACTION_AI` outputs are created as a draft
+   Task assigned to the relevant rep, not dispatched automatically — even
+   at a high `quality_score`. Rationale: an LLM evaluating its own draft
+   is a soft quality heuristic, not a correctness guarantee, so a human
+   stays in the loop before anything reaches a real customer. Revisit only
+   after the pattern has a track record.
+2. **`ACTION_AI` nodes are asynchronous, not blocking.** They use the same
+   `WAITING`/resume mechanism as `DELAY` nodes rather than holding an HTTP
+   connection open across a multi-call LangGraph loop. This keeps the
+   Node state machine's execution model consistent (every non-instant step
+   behaves the same way) and avoids long-lived synchronous requests between
+   `apps/api` and `apps/ai-service`.
 
 ### ❌ Phase 5 — Communication Hub, Reports, Integrations — DEFERRED TO AFTER PHASE 3 & 4
 - **Communication Hub**: Unified interaction log (Email, WhatsApp Cloud API, Twilio SMS).
