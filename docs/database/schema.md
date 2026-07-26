@@ -22,6 +22,23 @@ without changing the application-layer query shape.
 - `Organization` deleted → cascades to everything (an org going away should remove its data; `onDelete: Cascade` throughout).
 - `Company`/`Contact`/`User` deleted → related Leads/Deals get `SetNull` on the foreign key rather than cascading deletes. Losing the salesperson who resigned shouldn't delete the deal they were working — it should just become unassigned.
 
+## AI Workspace fields
+
+`Lead.score` (0–100, default `0`) is written either manually or by the AI
+service (see `docs/api/ai-service.md`). When the AI service sets it, an
+`AI_LEAD_SCORED` row is written to `ActivityType` in the same transaction —
+the AI service itself never touches this table or any other; only the Node
+API (`apps/api`) writes to the database. `ActivityType` is otherwise
+unchanged from the original CRM design (`LEAD_CREATED`, `EMAIL_SENT`,
+`CALL_LOGGED`, `MEETING_SCHEDULED`, `DEAL_STAGE_CHANGED`, `NOTE_ADDED`,
+`TASK_COMPLETED`, plus `AI_LEAD_SCORED`).
+
+Phase 3 (Workflow Automation) will add `Workflow`, `WorkflowNode`,
+`WorkflowEdge`, `WorkflowRun`, `WorkflowRunLog`, and an outbox table for
+event-driven triggers — none of these exist yet. See
+`docs/architecture/workflow-automation.md` for the design and
+`docs/EXECUTION_PLAN.md` §2 Phase 3 for current status.
+
 ## Why no `DashboardSnapshot` cache table yet
 
 At MVP scale (single-digit thousands of deals/leads per org), the aggregate
