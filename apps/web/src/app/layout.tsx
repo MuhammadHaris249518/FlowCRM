@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ActiveOrganizationProvider } from "@/features/auth/provider/ActiveOrganizationProvider";
 import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "FlowCRM AI — Close More Deals. Automate Everything.",
@@ -20,8 +17,8 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider>
-      <html lang="en" className={inter.variable}>
-        <body>
+      <html lang="en">
+        <body className="font-sans antialiased">
           <QueryProvider>
             <ActiveOrganizationProvider>{children}</ActiveOrganizationProvider>
           </QueryProvider>
@@ -30,3 +27,4 @@ export default function RootLayout({
     </ClerkProvider>
   );
 }
+

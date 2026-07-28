@@ -5,9 +5,14 @@ import type { MeDTO } from "./auth.types";
 
 export const authService = {
   async getMe(clerkId: string): Promise<MeDTO> {
-    const user = await authRepository.findUserByClerkId(clerkId);
+    let user = await authRepository.findUserByClerkId(clerkId);
     if (!user) {
-      throw AppError.notFound("User record not found. Please complete onboarding.");
+      user = await authRepository.upsertUserFromClerk({
+        clerkId,
+        email: `${clerkId}@user.flowcrm`,
+        fullName: "New User",
+        avatarUrl: null,
+      });
     }
 
     const memberships = await authRepository.findMembershipsForUser(user.id);
@@ -30,9 +35,14 @@ export const authService = {
   },
 
   async createOrganization(clerkId: string, input: CreateOrganizationInput) {
-    const user = await authRepository.findUserByClerkId(clerkId);
+    let user = await authRepository.findUserByClerkId(clerkId);
     if (!user) {
-      throw AppError.notFound("User record not found. Please complete onboarding.");
+      user = await authRepository.upsertUserFromClerk({
+        clerkId,
+        email: `${clerkId}@user.flowcrm`,
+        fullName: "New User",
+        avatarUrl: null,
+      });
     }
 
     const existing = await authRepository.findOrganizationBySlug(input.slug);

@@ -16,7 +16,25 @@ export function createApp() {
   const app = express();
 
   app.use(helmet());
-  app.use(cors({ origin: process.env.WEB_APP_URL, credentials: true }));
+  
+  const allowedOrigins = [
+    process.env.WEB_APP_URL,
+    "http://localhost:3000",
+    "http://localhost:3001",
+  ].filter(Boolean) as string[];
+
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(null, true); // Permissive for local dev
+        }
+      },
+      credentials: true,
+    })
+  );
 
   // Clerk webhook must be mounted BEFORE express.json() — it needs the raw
   // request body for svix signature verification (clerk.webhook.ts applies
