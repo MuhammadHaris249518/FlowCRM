@@ -23,7 +23,7 @@ contracts.
 | Sales Pipeline | ✅ | ✅ | ✅ | ✅ | Kanban board, stage transitions w/ `closedAt` + Activity logging, RBAC-tested |
 | Tasks / Calendar | ✅ | ✅ | ✅ | ✅ | Full CRUD + complete/reopen actions, month-view calendar, RBAC-tested |
 | AI Workspace / `apps/ai-service` | 🟡 | ❌ | ✅ | ❌ | FastAPI service live, wired to Leads via `/:id/score`. Committed `venv` cleaned up. Frontend UI & `docs/api/ai-service.md` pending |
-| Workflow Automation | ❌ | ❌ | — | — | Architecture redesigned (Node/Postgres Outbox + Python Handlers + LangGraph AI steps) |
+| Workflow Automation | 🟡 | ❌ | ✅ | ✅ | Sync engine live (TRIGGER/CONDITION/DELAY/ACTION_STATIC), outbox + resume pollers running. ACTION_AI and visual builder pending — see sprint 2 |
 | Communication Hub | ❌ | ❌ | — | — | Not started |
 | Reports (dedicated module) | ❌ | ❌ | — | — | Not started; Dashboard currently covers headline stats only |
 | Documents | ❌ | ❌ | — | — | Not modeled |

@@ -11,6 +11,7 @@ import { crmRouter } from "./modules/crm/crm.routes";
 import { leadsRouter } from "./modules/leads/leads.routes";
 import { pipelineRouter } from "./modules/pipeline/pipeline.routes";
 import { tasksRouter } from "./modules/tasks/tasks.routes";
+import { automationRouter } from "./modules/automation/automation.routes";
 export function createApp() {
   const app = express();
 
@@ -58,6 +59,7 @@ export function createApp() {
   app.use("/api/v1/crm", crmRouter);
   app.use("/api/v1/leads", leadsRouter);
   app.use("/api/v1/pipeline", pipelineRouter);
+  app.use("/api/v1/automation", automationRouter);
   app.use("/api/v1/tasks", tasksRouter);
 
   // Must be registered last — Express matches error middleware by arity (4 args).

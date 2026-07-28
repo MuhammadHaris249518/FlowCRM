@@ -2,6 +2,8 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import type { AuthContext } from "../../middleware/auth";
 import type { CreateLeadInput, LeadQuery, UpdateLeadInput } from "./leads.validation";
+import { emitOutboxEvent } from "../../lib/outbox";
+
 
 // Same rep-scoping pattern as dashboard.repository.scopeFilter and
 // crm.repository.contactScopeFilter — SALES_REP only sees leads assigned
@@ -115,7 +117,7 @@ export const leadsRepository = {
         contactId = contact.id;
       }
 
-      return tx.lead.create({
+      const lead = await tx.lead.create({
         data: {
           organizationId: auth.organizationId,
           contactId,
@@ -126,14 +128,45 @@ export const leadsRepository = {
         },
         include: leadInclude,
       });
+
+      await emitOutboxEvent(tx, {
+        organizationId: auth.organizationId,
+        type: "LEAD_CREATED",
+        payload: { entityType: "Lead", entityId: lead.id },
+      });
+
+      return lead;
     });
   },
 
   async update(auth: AuthContext, id: string, input: UpdateLeadInput) {
-    return prisma.lead.update({
-      where: { id },
-      data: input,
-      include: leadInclude,
+    return prisma.$transaction(async (tx) => {
+      const existing = await tx.lead.findUnique({
+        where: { id },
+        select: { status: true },
+      });
+      const previousStatus = existing?.status;
+
+      const lead = await tx.lead.update({
+        where: { id },
+        data: input,
+        include: leadInclude,
+      });
+
+      if (input.status && input.status !== previousStatus) {
+        await emitOutboxEvent(tx, {
+          organizationId: auth.organizationId,
+          type: "LEAD_STATUS_CHANGED",
+          payload: {
+            entityType: "Lead",
+            entityId: id,
+            fromStatus: previousStatus,
+            toStatus: input.status,
+          },
+        });
+      }
+
+      return lead;
     });
   },
 

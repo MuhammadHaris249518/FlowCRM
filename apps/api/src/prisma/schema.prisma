@@ -67,6 +67,7 @@ model Organization {
   deals       Deal[]
   tasks       Task[]
   activities  Activity[]
+  workflows   Workflow[]
 
   @@index([slug])
 }
@@ -235,3 +236,123 @@ model Activity {
   // Powers the "Recent Activities" feed — always queried newest-first per org
   @@index([organizationId, createdAt])
 }
+
+// --- Workflow Automation ---
+
+enum WorkflowNodeType {
+  TRIGGER
+  CONDITION
+  DELAY
+  ACTION_STATIC
+  ACTION_AI
+}
+
+enum WorkflowRunStatus {
+  RUNNING
+  WAITING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum OutboxEventType {
+  LEAD_CREATED
+  LEAD_STATUS_CHANGED
+  DEAL_STAGE_CHANGED
+  TASK_OVERDUE
+  ACTIVITY_LOGGED
+}
+
+model Workflow {
+  id             String   @id @default(cuid())
+  name           String
+  organizationId String
+  isActive       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  nodes        WorkflowNode[]
+  edges        WorkflowEdge[]
+  runs         WorkflowRun[]
+
+  @@index([organizationId, isActive])
+}
+
+model WorkflowNode {
+  id         String           @id @default(cuid())
+  workflowId String
+  type       WorkflowNodeType
+  config     Json
+  positionX  Float            @default(0)
+  positionY  Float            @default(0)
+
+  workflow Workflow         @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  outgoing WorkflowEdge[]   @relation("EdgeSource")
+  incoming WorkflowEdge[]   @relation("EdgeTarget")
+  runLogs  WorkflowRunLog[]
+
+  @@index([workflowId])
+}
+
+model WorkflowEdge {
+  id           String  @id @default(cuid())
+  workflowId   String
+  sourceNodeId String
+  targetNodeId String
+  label        String?
+
+  workflow   Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  sourceNode WorkflowNode @relation("EdgeSource", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  targetNode WorkflowNode @relation("EdgeTarget", fields: [targetNodeId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+}
+
+model WorkflowRun {
+  id             String            @id @default(cuid())
+  workflowId     String
+  organizationId String
+  status         WorkflowRunStatus @default(RUNNING)
+  currentNodeId  String?
+  context        Json              @default("{}")
+  entityType     String
+  entityId       String
+  resumeAt       DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  workflow Workflow         @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  logs     WorkflowRunLog[]
+
+  @@index([status, resumeAt])
+  @@index([organizationId, entityType, entityId])
+}
+
+model WorkflowRunLog {
+  id        String   @id @default(cuid())
+  runId     String
+  nodeId    String
+  status    String
+  output    Json?
+  error     String?
+  createdAt DateTime @default(now())
+
+  run  WorkflowRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  node WorkflowNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+}
+
+model OutboxEvent {
+  id             String          @id @default(cuid())
+  organizationId String
+  type           OutboxEventType
+  payload        Json
+  processedAt    DateTime?
+  createdAt      DateTime        @default(now())
+
+  @@index([processedAt, createdAt])
+  @@index([organizationId])
+}
+
