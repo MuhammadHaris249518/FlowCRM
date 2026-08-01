@@ -23,20 +23,18 @@ same transactional guarantees and RBAC scoping as the rest of the CRM data.
 Decision: no n8n. External side effects (Slack, Twilio, SMTP) are called
 directly from Node/Python integration functions instead.
 
-## Core pattern: Postgres outbox + Node state machine
+## Core pattern: Postgres outbox + Node background poller
 
-1. Any transactional write that could be a trigger (Lead created, Deal
-   stage changed, Task overdue) also writes an outbox event row, in the
-   **same DB transaction** as the domain write. This guarantees the event
-   is never lost or duplicated relative to the actual data change.
-2. A background worker polls the outbox table for unprocessed rows and
-   checks whether any active workflow's trigger matches.
-3. If yes, a `WorkflowRun` is created and the state machine begins
-   executing nodes in order, persisting progress after every step so a
-   crash mid-run resumes rather than restarting.
+1. **Transactional Event Logging:** Whenever a new lead is created (or deal stage changed), an outbox event row (`OutboxEvent`) is written to Postgres within the **exact same database transaction** as the domain write. This guarantees zero event loss and zero duplicate triggers.
+2. **Background Poller (5–10s Interval):** A background poller process (`automation.outbox-poller.ts`) polls the `OutboxEvent` table every 5 to 10 seconds for unprocessed events (`processedAt == null`).
+3. **Workflow Execution:**
+   - The poller fetches active matching workflows.
+   - It instantiates a `WorkflowRun` state machine.
+   - It dispatches the lead data to `apps/ai-service` (`POST /score-lead`).
+   - Based on the score (e.g. `Score >= 75` vs `Score < 70`), it triggers either AI Email Generation (with 3-attempt retry logic) or Team Review Task creation.
+   - Once executed, the outbox event is marked as `processedAt = new Date()`.
 
-This keeps normal CRUD request/response paths fast and unaffected by
-automation logic, while giving at-least-once delivery for triggers.
+This keeps API request/response paths lightweight and sub-100ms while guaranteeing reliable background execution.
 
 ## Data model (Prisma models — not yet created)
 
@@ -90,16 +88,58 @@ score, and critique.
    loop. A webhook or poll from `ai-service` resolves the run once the
    loop finishes.
 
-## Worked example
+## Worked example: Lead AI Scoring & Dual-Path Human Approval (with Retry & Fallback)
 
-1. `leads.service.ts` updates a Lead to `CONTACTED`; in the same
-   transaction, an outbox event `LEAD_STATUS_CHANGED` is written.
-2. The outbox poller finds an active workflow matching that trigger,
-   creates a `WorkflowRun`, starts at a `DELAY` node ("wait 3 days").
-3. After 3 days, a scheduled check resumes the run, evaluates a
-   `CONDITION` node ("still in CONTACTED?"), and if true, runs an
-   `ACTION_STATIC` node that creates a follow-up Task — reusing the
-   existing Tasks module code, not duplicating it.
+This canonical workflow demonstrates FlowCRM's dual-path automation with Human-in-the-Loop (HITL) approval gates, Retry Policy, and Error Fallbacks:
+
+```
+                  ┌─────────────────────────────────┐
+                  │ TRIGGER: Lead Created           │
+                  └────────────────┬────────────────┘
+                                   │
+                                   ▼
+                  ┌─────────────────────────────────┐
+                  │ ACTION_AI: Score Lead (0-100)   │
+                  └────────────────┬────────────────┘
+                                   │
+                     ┌─────────────┴─────────────┐
+                     │                           │
+          Score >= 75│                           │Score < 70
+                     ▼                           ▼
+  ┌──────────────────────────────────┐ ┌──────────────────────────────────┐
+  │ ACTION_AI: Generate Email Draft  │ │ ACTION_STATIC: Create Team Review│
+  └──────────────────┬───────────────┘ └──────────────────┬───────────────┘
+                     │                                    │
+           ┌─────────┴─────────┐                          ▼
+           │ Success?          │               ┌──────────────────────────────────┐
+           │                   │               │ TEAM REVIEW: Manager Approves?   │
+        Yes│                 No│(Attempts < 3) └───────────┬──────────────┬───────┘
+           ▼                   ▼                               │ Yes          │ No
+┌──────────────────┐ ┌───────────────────┐                     ▼              ▼
+│ TASK: Employee   │ │ RETRY NODE: Retry │             ┌──────────────────────┐ ┌─────────┐
+│ Reviews Draft    │ │ AI Email Draft    │             │ Move to Email Service│ │ Reject  │
+└──────────┬───────┘ └─────────┬─────────┘             └──────────────────────┘ └─────────┘
+           │                   │
+           ▼                   ▼ (Failed 3 Times)
+┌──────────────────┐ ┌─────────────────────────────────────────────────┐
+│ ACTION_STATIC:   │ │ FALLBACK TASK & UI ALERT:                       │
+│ Auto Send Email  │ │ "Email Generation Failed - Manually Create Draft│
+└──────────────────┘ └─────────────────────────────────────────────────┘
+```
+
+1. **Trigger (`LEAD_CREATED`):** A new lead enters the system (via API, Web Form, or Manual Entry). An outbox event `LEAD_CREATED` is emitted transactionally.
+2. **AI Lead Scoring (`ACTION_AI`):** The workflow engine invokes `apps/ai-service` (`POST /score-lead`), returning a score (0–100).
+3. **Condition Branching:**
+   - **Path A (High Quality: `score >= 75`):**
+     - The engine executes `ACTION_AI` to generate an outreach email draft.
+     - **Retry Mechanism (Up to 3 Retries):** If AI generation fails (e.g. LLM rate limit or timeout), the **Retry Node** re-attempts execution automatically up to 3 times with exponential backoff.
+     - **Success Case:** The generated email is presented to the employee as a Task: *"Review & Improve AI Email Draft"*. Once the employee reviews and clicks **Approve**, the email is automatically dispatched via the email service (`SEND_EMAIL`).
+     - **Fallback Failure Case (After 3 Failed Retries):** If AI generation fails 3 times, a **UI Alert & High-Priority Task** is displayed on the employee's screen: *"Email Generation Failed - Please manually draft and send outreach email"*.
+   - **Path B (Low / Needs Review: `score < 70`):**
+     - The engine creates a **Team Review Task** for sales management.
+     - The team inspects the lead. If **Approved**, the lead is unlocked to enter the email outreach pipeline; if **Rejected**, the lead is marked `UNQUALIFIED`.
+
+
 
 ## Open items for implementation phase
 
