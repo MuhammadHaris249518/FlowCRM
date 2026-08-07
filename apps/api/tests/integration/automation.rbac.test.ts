@@ -141,4 +141,57 @@ describe("Workflow Automation RBAC & Repository Scoping", () => {
 
     await prisma.workflow.delete({ where: { id: inactiveWf.id } });
   });
+
+  describe("Role gate on mutating workflow routes", () => {
+    it("a SALES_REP gets 403 creating a workflow", async () => {
+      __setMockClerkUserId(repA.clerkId);
+
+      const res = await request(app)
+        .post("/api/v1/automation")
+        .set(authHeaders(repA, orgA.organizationId))
+        .send({
+          name: "Rep Attempted Workflow",
+          isActive: false,
+          nodes: [{ id: "n1", type: "TRIGGER", config: { trigger: "LEAD_CREATED" }, positionX: 0, positionY: 0 }],
+          edges: [],
+        });
+
+      expect(res.status).toBe(403);
+    });
+
+    it("a SALES_REP gets 403 updating a workflow", async () => {
+      __setMockClerkUserId(repA.clerkId);
+
+      const res = await request(app)
+        .patch(`/api/v1/automation/${workflowA.id}`)
+        .set(authHeaders(repA, orgA.organizationId))
+        .send({ name: "Renamed by rep" });
+
+      expect(res.status).toBe(403);
+    });
+
+    it("a SALES_REP gets 403 deleting a workflow", async () => {
+      __setMockClerkUserId(repA.clerkId);
+
+      const res = await request(app)
+        .delete(`/api/v1/automation/${workflowA.id}`)
+        .set(authHeaders(repA, orgA.organizationId));
+
+      expect(res.status).toBe(403);
+    });
+
+    it("a SALES_REP still gets 200 on read-only routes (list/getById)", async () => {
+      __setMockClerkUserId(repA.clerkId);
+
+      const listRes = await request(app)
+        .get("/api/v1/automation")
+        .set(authHeaders(repA, orgA.organizationId));
+      expect(listRes.status).toBe(200);
+
+      const getRes = await request(app)
+        .get(`/api/v1/automation/${workflowA.id}`)
+        .set(authHeaders(repA, orgA.organizationId));
+      expect(getRes.status).toBe(200);
+    });
+  });
 });
