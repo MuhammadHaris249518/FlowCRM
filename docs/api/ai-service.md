@@ -98,13 +98,72 @@ present (`hasFullName`, `hasEmail`, `hasPhone`). Raw PII never leaves
 **Model:** `llama-3.3-70b-versatile` via Groq, `temperature: 0.2`,
 JSON-mode response format. Configurable via `GROQ_MODEL` env var.
 
-## Planned — not yet implemented
+## POST /email/draft
 
-`POST /email/draft` — will run a LangGraph Draft → Evaluate → Rewrite loop
-to produce a personalized outreach email. See
-`docs/architecture/workflow-automation.md` for the full design, including
-the human-approval requirement (drafts are never auto-sent) and the
-async execution contract with the Node workflow engine.
+Runs a LangGraph Draft → Evaluate loop (max 2 revisions) to produce a
+personalized outreach email. Returns immediately with a job ID — the
+actual drafting happens in a background asyncio task on this same
+process. Node polls `GET /email/draft/{jobId}` for the result.
+
+**This endpoint never sends anything.** The output is always meant to
+become a draft Task for a human sales rep to review — see
+`docs/architecture/workflow-automation-architecture-walkthrough.md` for
+how Node's workflow engine will eventually wire this into the WAITING
+state (not yet implemented on the Node side as of this writing).
+
+**Request body**
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| instructions | string | yes | 1–2000 chars, from the ACTION_AI node's config |
+| context | object | no | see below, all fields optional |
+| context.contactName | string \| null | no | |
+| context.companyName | string \| null | no | |
+| context.leadStatus | string \| null | no | |
+| context.leadSource | string \| null | no | |
+| context.dealStage | string \| null | no | |
+| context.dealTitle | string \| null | no | |
+| context.notes | string \| null | no | |
+
+**Response `202`**
+```json
+{ "jobId": "a1b2c3d4-...", "status": "pending" }
+```
+
+## GET /email/draft/{jobId}
+
+Poll this until `status` is `completed` or `failed`.
+
+**Response `200`** (while running)
+```json
+{ "jobId": "a1b2c3d4-...", "status": "running", "result": null, "error": null }
+```
+
+**Response `200`** (completed)
+```json
+{
+  "jobId": "a1b2c3d4-...",
+  "status": "completed",
+  "result": {
+    "subject": "Following up on your pricing question",
+    "body": "Hi Sarah, wanted to circle back on...",
+    "revisionCount": 2,
+    "finalFeedback": "Approved — addresses the pricing question directly, professional tone."
+  },
+  "error": null
+}
+```
+
+**Errors**
+- `401` — missing/invalid `X-Internal-Service-Key`
+- `404` — unknown `jobId`
+- `422` — request body fails validation
+
+**Known limitation:** job state is stored in-memory, per-process. It does
+not survive a restart and will not work correctly across multiple
+uvicorn workers. See `app/services/job_store.py` for the documented
+tradeoff.
+
 
 ## Environment variables
 
