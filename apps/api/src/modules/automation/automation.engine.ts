@@ -1,8 +1,50 @@
 import { prisma } from "../../lib/prisma";
 import type { Workflow, WorkflowNode, WorkflowEdge, WorkflowRun } from "@prisma/client";
+import { aiServiceClient, type EmailDraftContext } from "../../lib/ai-service-client";
+
+export const AI_POLL_INTERVAL_MS = 5000;
+export const AI_MAX_POLL_ATTEMPTS = 40; // ~3.3 min ceiling — job_store is in-memory and non-durable
 
 type NodeWithEdges = WorkflowNode;
 type WorkflowWithGraph = Workflow & { nodes: NodeWithEdges[]; edges: WorkflowEdge[] };
+
+// Builds the personalization context ai-service needs to draft a real email.
+// Unlike lead scoring, this intentionally sends real names/notes, not boolean
+// signals — the org boundary is enforced by scoping this query to context.organizationId.
+async function buildEmailDraftContext(context: Record<string, unknown>): Promise<EmailDraftContext> {
+  const organizationId = context.organizationId as string;
+  const entityType = context.entityType as string;
+  const entityId = context.entityId as string;
+
+  if (entityType === "Lead") {
+    const lead = await prisma.lead.findFirst({
+      where: { id: entityId, organizationId },
+      include: { contact: { include: { company: true } } },
+    });
+    return {
+      contactName: lead?.contact?.fullName ?? null,
+      companyName: lead?.contact?.company?.name ?? null,
+      leadStatus: lead?.status ?? null,
+      leadSource: lead?.source ?? null,
+      notes: lead?.notes ?? null,
+    };
+  }
+
+  if (entityType === "Deal") {
+    const deal = await prisma.deal.findFirst({
+      where: { id: entityId, organizationId },
+      include: { contact: true, company: true },
+    });
+    return {
+      contactName: deal?.contact?.fullName ?? null,
+      companyName: deal?.company?.name ?? null,
+      dealStage: deal?.stage ?? null,
+      dealTitle: deal?.title ?? null,
+    };
+  }
+
+  return {};
+}
 
 function findNextNodeId(edges: WorkflowEdge[], currentNodeId: string, branch?: "true" | "false"): string | null {
   const candidates = edges.filter((e) => e.sourceNodeId === currentNodeId);
@@ -128,14 +170,107 @@ export async function advanceRun(run: WorkflowRun, workflow: WorkflowWithGraph):
     }
 
     if (node.type === "ACTION_AI") {
-      // Deferred to sprint 2 — do not implement here.
-      await prisma.workflowRun.update({ where: { id: run.id }, data: { status: "FAILED" } });
-      await logStep(run.id, node.id, "FAILED", undefined, "ACTION_AI not yet implemented (sprint 2)");
+      const instructions = (config.instructions as string | undefined)?.trim();
+      if (!instructions) {
+        await prisma.workflowRun.update({ where: { id: run.id }, data: { status: "FAILED" } });
+        await logStep(run.id, node.id, "FAILED", undefined, "ACTION_AI node has no instructions configured");
+        return;
+      }
+
+      try {
+        const draftContext = await buildEmailDraftContext(context);
+        const job = await aiServiceClient.createEmailDraft({ instructions, context: draftContext });
+
+        await prisma.workflowRun.update({
+          where: { id: run.id },
+          data: {
+            status: "WAITING",
+            currentNodeId: node.id, // stay on this node — resolved by the AI poller, not the resume poller
+            aiJobId: job.jobId,
+            aiPollAttempts: 0,
+            resumeAt: new Date(Date.now() + AI_POLL_INTERVAL_MS),
+            context: context as object,
+          },
+        });
+        await logStep(run.id, node.id, "SUCCESS", { jobId: job.jobId, status: "dispatched" });
+      } catch (err) {
+        await prisma.workflowRun.update({ where: { id: run.id }, data: { status: "FAILED" } });
+        await logStep(run.id, node.id, "FAILED", undefined, `Failed to dispatch to ai-service: ${(err as Error).message}`);
+      }
       return;
     }
   }
 
   await prisma.workflowRun.update({ where: { id: run.id }, data: { status: "COMPLETED" } });
+}
+
+export async function resolveAiNode(run: WorkflowRun, workflow: WorkflowWithGraph): Promise<void> {
+  if (!run.aiJobId) return;
+
+  let status;
+  try {
+    status = await aiServiceClient.getEmailDraftStatus(run.aiJobId);
+  } catch (err) {
+    // Transient network error talking to ai-service — don't fail the run yet,
+    // just let the next poll cycle retry (still bounded by aiPollAttempts below).
+    await bumpAiPollAttempt(run, `Poll error: ${(err as Error).message}`);
+    return;
+  }
+
+  if (status.status === "completed" && status.result) {
+    const context = run.context as Record<string, unknown>;
+    await prisma.task.create({
+      data: {
+        organizationId: context.organizationId as string,
+        title: `Review AI-drafted email: ${status.result.subject}`,
+        description: `To: ${context.entityType} ${context.entityId}\n\nSubject: ${status.result.subject}\n\n${status.result.body}\n\n---\nDrafted by AI (${status.result.revisionCount} revision(s)). Review and send manually — not auto-sent.`,
+        leadId: context.entityType === "Lead" ? (context.entityId as string) : undefined,
+        dealId: context.entityType === "Deal" ? (context.entityId as string) : undefined,
+        priority: "MEDIUM",
+      },
+    });
+
+    const node = workflow.nodes.find((n) => n.id === run.currentNodeId)!;
+    const next = findNextNodeId(workflow.edges, node.id);
+
+    await logStep(run.id, node.id, "SUCCESS", { jobId: run.aiJobId, result: status.result });
+    await prisma.workflowRun.update({
+      where: { id: run.id },
+      data: { status: "RUNNING", currentNodeId: next, aiJobId: null, aiPollAttempts: 0, resumeAt: null },
+    });
+
+    const updated = await prisma.workflowRun.findUniqueOrThrow({ where: { id: run.id } });
+    await advanceRun(updated, workflow);
+    return;
+  }
+
+  if (status.status === "failed") {
+    await logStep(run.id, run.currentNodeId!, "FAILED", undefined, status.error ?? "ai-service job failed");
+    await prisma.workflowRun.update({
+      where: { id: run.id },
+      data: { status: "FAILED", aiJobId: null, resumeAt: null },
+    });
+    return;
+  }
+
+  // still pending/running
+  await bumpAiPollAttempt(run);
+}
+
+async function bumpAiPollAttempt(run: WorkflowRun, timeoutError?: string): Promise<void> {
+  const attempts = run.aiPollAttempts + 1;
+  if (attempts >= AI_MAX_POLL_ATTEMPTS) {
+    await logStep(run.id, run.currentNodeId!, "FAILED", undefined, timeoutError ?? "Timed out waiting on ai-service email draft job");
+    await prisma.workflowRun.update({
+      where: { id: run.id },
+      data: { status: "FAILED", aiJobId: null, resumeAt: null },
+    });
+    return;
+  }
+  await prisma.workflowRun.update({
+    where: { id: run.id },
+    data: { aiPollAttempts: attempts, resumeAt: new Date(Date.now() + AI_POLL_INTERVAL_MS) },
+  });
 }
 
 export async function startRun(workflow: WorkflowWithGraph, entityType: string, entityId: string, seedContext: Record<string, unknown>): Promise<void> {

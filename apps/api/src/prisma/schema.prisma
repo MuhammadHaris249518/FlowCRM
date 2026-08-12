@@ -319,6 +319,8 @@ model WorkflowRun {
   entityType     String
   entityId       String
   resumeAt       DateTime?
+  aiJobId        String?           // set while WAITING on an ACTION_AI node
+  aiPollAttempts Int               @default(0)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 

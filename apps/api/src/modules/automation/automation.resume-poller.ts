@@ -3,7 +3,7 @@ import { advanceRun } from "./automation.engine";
 
 export async function pollResumableRunsOnce(): Promise<void> {
   const runs = await prisma.workflowRun.findMany({
-    where: { status: "WAITING", resumeAt: { lte: new Date() } },
+    where: { status: "WAITING", aiJobId: null, resumeAt: { lte: new Date() } },
     take: 50,
   });
 
