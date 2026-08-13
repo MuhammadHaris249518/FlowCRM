@@ -71,5 +71,14 @@ describe("Lead AI scoring", () => {
       orderBy: { createdAt: "desc" },
     });
     expect(activity).not.toBeNull();
+
+    const outboxEvent = await prisma.outboxEvent.findFirst({
+      where: { organizationId: ctx.organizationId, type: "LEAD_SCORE_CHANGED" },
+      orderBy: { createdAt: "desc" },
+    });
+    expect(outboxEvent).not.toBeNull();
+    expect((outboxEvent?.payload as any).entityId).toBe(lead.id);
+    expect((outboxEvent?.payload as any).entity.score).toBe(72);
+    expect((outboxEvent?.payload as any).entity.previousScore).toBe(0);
   });
 });

@@ -176,6 +176,12 @@ export const leadsRepository = {
 
   async updateScore(auth: AuthContext, id: string, score: number, reasoning: string) {
     return prisma.$transaction(async (tx) => {
+      // Capture the score BEFORE the update — the event needs to say what
+      // changed, not just the new value (mirrors how update() captures
+      // previousStatus for LEAD_STATUS_CHANGED above).
+      const before = await tx.lead.findUnique({ where: { id }, select: { score: true } });
+      const previousScore = before?.score ?? 0;
+
       const lead = await tx.lead.update({
         where: { id },
         data: { score },
@@ -190,6 +196,20 @@ export const leadsRepository = {
           actorId: auth.userId,
         },
       });
+
+      // Only fire the trigger if the score actually changed — re-running AI
+      // scoring and landing on the same number shouldn't spam workflows.
+      if (score !== previousScore) {
+        await emitOutboxEvent(tx, {
+          organizationId: auth.organizationId,
+          type: "LEAD_SCORE_CHANGED",
+          payload: {
+            entityType: "Lead",
+            entityId: id,
+            entity: { score, previousScore, reasoning },
+          },
+        });
+      }
 
       return lead;
     });

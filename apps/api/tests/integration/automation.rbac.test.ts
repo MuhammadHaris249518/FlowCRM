@@ -14,15 +14,16 @@ describe("Workflow Automation RBAC & Repository Scoping", () => {
   const app = buildTestApp();
   let orgA: TestOrgContext;
   let orgB: TestOrgContext;
+  let managerA: TestOrgContext["users"][number];
   let repA: TestOrgContext["users"][number];
   let repB: TestOrgContext["users"][number];
   let workflowA: { id: string };
   let workflowB: { id: string };
 
   beforeAll(async () => {
-    orgA = await setupOrgWithUsers(["SALES_REP"]);
+    orgA = await setupOrgWithUsers(["SALES_MANAGER", "SALES_REP"]);
     orgB = await setupOrgWithUsers(["SALES_REP"]);
-    [repA] = orgA.users;
+    [managerA, repA] = orgA.users;
     [repB] = orgB.users;
 
     const nodeA = await prisma.workflowNode.create({
@@ -61,23 +62,23 @@ describe("Workflow Automation RBAC & Repository Scoping", () => {
     await cleanupTestContext(orgB);
   });
 
-  it("1. A SALES_REP in Org A cannot fetch, update, or delete a Workflow belonging to Org B (returns 404)", async () => {
-    __setMockClerkUserId(repA.clerkId);
+  it("1. A user in Org A cannot fetch, update, or delete a Workflow belonging to Org B (returns 404)", async () => {
+    __setMockClerkUserId(managerA.clerkId);
 
     const getRes = await request(app)
       .get(`/api/v1/automation/${workflowB.id}`)
-      .set(authHeaders(repA, orgA.organizationId));
+      .set(authHeaders(managerA, orgA.organizationId));
     expect(getRes.status).toBe(404);
 
     const patchRes = await request(app)
       .patch(`/api/v1/automation/${workflowB.id}`)
-      .set(authHeaders(repA, orgA.organizationId))
+      .set(authHeaders(managerA, orgA.organizationId))
       .send({ name: "Hacked Workflow" });
     expect(patchRes.status).toBe(404);
 
     const deleteRes = await request(app)
       .delete(`/api/v1/automation/${workflowB.id}`)
-      .set(authHeaders(repA, orgA.organizationId));
+      .set(authHeaders(managerA, orgA.organizationId));
     expect(deleteRes.status).toBe(404);
   });
 

@@ -101,6 +101,7 @@ function TriggerFields({ draft, commit }: { draft: Record<string, unknown>; comm
       >
         <option value="LEAD_CREATED">A lead is created</option>
         <option value="LEAD_STATUS_CHANGED">A lead's status changes</option>
+        <option value="LEAD_SCORE_CHANGED">A lead's AI score changes</option>
         <option value="DEAL_STAGE_CHANGED">A deal's stage changes</option>
         <option value="TASK_OVERDUE">A task becomes overdue</option>
         <option value="ACTIVITY_LOGGED">An activity is logged</option>
