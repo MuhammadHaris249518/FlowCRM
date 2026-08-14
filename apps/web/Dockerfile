@@ -20,10 +20,12 @@ COPY apps/web ./apps/web
 # Receive build arguments passed from Docker Compose
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ARG CLERK_SECRET_KEY
+ARG NEXT_PUBLIC_API_URL
 
 # Set environment variables for Next.js build time evaluation
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
 ENV CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 # Build Next.js app
 RUN cd apps/web && npx next build

@@ -132,7 +132,11 @@ export const leadsRepository = {
       await emitOutboxEvent(tx, {
         organizationId: auth.organizationId,
         type: "LEAD_CREATED",
-        payload: { entityType: "Lead", entityId: lead.id },
+        payload: {
+          entityType: "Lead",
+          entityId: lead.id,
+          entity: { status: lead.status, source: lead.source ?? null, score: lead.score },
+        },
       });
 
       return lead;
@@ -160,8 +164,7 @@ export const leadsRepository = {
           payload: {
             entityType: "Lead",
             entityId: id,
-            fromStatus: previousStatus,
-            toStatus: input.status,
+            entity: { fromStatus: previousStatus, toStatus: input.status },
           },
         });
       }
