@@ -9,3 +9,19 @@ export function useConversionFunnel(range: ReportsRange) {
     staleTime: 60_000,
   });
 }
+
+export function useWinLossReport(range: ReportsRange) {
+  return useQuery({
+    queryKey: ["reports", "win-loss", range],
+    queryFn: () => reportsApi.getWinLossReport(range),
+    staleTime: 60_000,
+  });
+}
+
+export function useTrends(months: number) {
+  return useQuery({
+    queryKey: ["reports", "trends", months],
+    queryFn: () => reportsApi.getTrends(months),
+    staleTime: 60_000,
+  });
+}

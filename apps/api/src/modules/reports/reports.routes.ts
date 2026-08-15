@@ -13,3 +13,13 @@ reportsRouter.get(
   "/conversion-funnel",
   asyncHandler(reportsController.getConversionFunnel)
 );
+
+reportsRouter.get(
+  "/win-loss",
+  asyncHandler(reportsController.getWinLossReport)
+);
+
+reportsRouter.get(
+  "/trends",
+  asyncHandler(reportsController.getTrends)
+);

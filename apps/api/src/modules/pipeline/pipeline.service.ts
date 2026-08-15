@@ -114,7 +114,7 @@ export const pipelineService = {
     const existing = await pipelineRepository.getById(auth, id);
     if (!existing) throw AppError.notFound("Deal not found");
 
-    const deal = await pipelineRepository.updateStage(auth, id, input.stage);
+    const deal = await pipelineRepository.updateStage(auth, id, input.stage, input.lostReason);
     await pipelineRepository.logStageChangeActivity(auth, deal.title, input.stage);
     return toDealDTO(deal);
   },

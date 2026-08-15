@@ -8,3 +8,9 @@ export const reportsRangeQuerySchema = z.object({
 });
 
 export type ReportsRangeQuery = z.infer<typeof reportsRangeQuerySchema>;
+
+export const trendsQuerySchema = z.object({
+  months: z.coerce.number().int().min(1).max(24).default(6),
+});
+
+export type TrendsQuery = z.infer<typeof trendsQuerySchema>;

@@ -171,18 +171,28 @@ model Lead {
   @@index([organizationId, createdAt])
 }
 
+enum DealLostReason {
+  BUDGET
+  TIMING
+  COMPETITOR
+  NO_RESPONSE
+  NOT_A_FIT
+  OTHER
+}
+
 model Deal {
-  id             String    @id @default(cuid())
+  id             String          @id @default(cuid())
   title          String
-  value          Decimal   @db.Decimal(12, 2)
-  stage          DealStage @default(NEW)
+  value          Decimal         @db.Decimal(12, 2)
+  stage          DealStage       @default(NEW)
   organizationId String
   companyId      String?
   contactId      String?
   assigneeId     String?
   closedAt       DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  lostReason     DealLostReason?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   company      Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)

@@ -44,9 +44,24 @@ export const updateDealSchema = z.object({
   assigneeId: z.string().cuid().nullable().optional(),
 });
 
-export const updateDealStageSchema = z.object({
-  stage: dealStageEnum,
-});
+export const dealLostReasonEnum = z.enum([
+  "BUDGET",
+  "TIMING",
+  "COMPETITOR",
+  "NO_RESPONSE",
+  "NOT_A_FIT",
+  "OTHER",
+]);
+
+export const updateDealStageSchema = z
+  .object({
+    stage: dealStageEnum,
+    lostReason: dealLostReasonEnum.optional(),
+  })
+  .refine((data) => data.stage !== "LOST" || data.lostReason !== undefined, {
+    message: "lostReason is required when moving a deal to LOST",
+    path: ["lostReason"],
+  });
 
 export type DealQuery = z.infer<typeof dealQuerySchema>;
 export type CreateDealInput = z.infer<typeof createDealSchema>;

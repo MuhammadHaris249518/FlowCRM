@@ -47,4 +47,47 @@ export const reportsRepository = {
     }
     return counts;
   },
+
+  async getClosedDeals(auth: AuthContext, range: ReportsRangeQuery["range"]) {
+    const closedAt = { gte: periodStart(range) };
+    return prisma.deal.findMany({
+      where: {
+        ...scopeFilter(auth),
+        stage: { in: ["WON", "LOST"] },
+        closedAt,
+      },
+      select: {
+        stage: true,
+        value: true,
+        lostReason: true,
+        assigneeId: true,
+        assignee: { select: { fullName: true } },
+      },
+    });
+  },
+
+  async getMonthlyTrendData(auth: AuthContext, monthStart: Date, monthEnd: Date) {
+    const scope = scopeFilter(auth);
+    const window = { gte: monthStart, lt: monthEnd };
+
+    const [revenueAgg, newLeadsCount, dealsWonCount, totalLeadsCount, convertedLeadsCount] =
+      await Promise.all([
+        prisma.deal.aggregate({
+          where: { ...scope, stage: "WON", closedAt: window },
+          _sum: { value: true },
+        }),
+        prisma.lead.count({ where: { ...scope, createdAt: window } }),
+        prisma.deal.count({ where: { ...scope, stage: "WON", closedAt: window } }),
+        prisma.lead.count({ where: { ...scope, createdAt: window } }),
+        prisma.lead.count({ where: { ...scope, status: "CONVERTED", createdAt: window } }),
+      ]);
+
+    return {
+      revenue: Number(revenueAgg._sum.value ?? 0),
+      newLeads: newLeadsCount,
+      dealsWon: dealsWonCount,
+      totalLeadsForConversion: totalLeadsCount,
+      convertedLeads: convertedLeadsCount,
+    };
+  },
 };

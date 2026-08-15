@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma, DealLostReason } from "@prisma/client";
 import { prisma } from "../../lib/prisma";
 import type { AuthContext } from "../../middleware/auth";
 import type { CreateDealInput, DealQuery, UpdateDealInput } from "./pipeline.validation";
@@ -128,11 +128,22 @@ export const pipelineRepository = {
   // closedAt is derived, never client-supplied: set on entering WON/LOST,
   // cleared if a deal is moved back out of a closed stage (e.g. reopened
   // after being marked Lost by mistake).
-  async updateStage(_auth: AuthContext, id: string, stage: DealStage) {
+  async updateStage(
+    _auth: AuthContext,
+    id: string,
+    stage: DealStage,
+    lostReason?: DealLostReason
+  ) {
     const isClosedStage = stage === "WON" || stage === "LOST";
     return prisma.deal.update({
       where: { id },
-      data: { stage, closedAt: isClosedStage ? new Date() : null },
+      data: {
+        stage,
+        closedAt: isClosedStage ? new Date() : null,
+        // Clear stale lostReason if the deal is reopened or won instead —
+        // mirrors the existing closedAt-clearing behavior above.
+        lostReason: stage === "LOST" ? lostReason : null,
+      },
       include: dealInclude,
     });
   },
