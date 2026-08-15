@@ -1,6 +1,6 @@
 # FlowCRM AI — Execution Plan
 
-**Status as of:** August 1, 2026 (post Workflow Automation Engine & Outbox Poller Implementation)  
+**Status as of:** August 14, 2026 (post Workflow Automation Engine, AI Poller & Visual DAG Builder UI Implementation)  
 **Owner:** Muhammad Haris  
 **Architect/Engineer:** Antigravity (this project)  
 
@@ -16,18 +16,18 @@ This document is the single source of truth for sequencing. It is re-verified ag
 | Authentication (Clerk) | ✅ | ✅ | ✅ | — | Real session verification, org-on-signup, webhook sync, RBAC middleware all live |
 | Dashboard | ✅ | ✅ | ✅ | ✅ | `dashboard.rbac.test.ts` exists — RBAC-tested |
 | CRM (Companies & Contacts) | ✅ | ✅ | ✅ | ✅ | `crm.rbac.test.ts` exists — RBAC-tested |
-| Leads | ✅ | ✅ | ✅ | ✅ | Full CRUD + `/convert` (transactional) + `/:id/score` (AI scoring), RBAC-tested |
+| Leads | ✅ | ✅ | ✅ | ✅ | Full CRUD + `/convert` (transactional) + `/:id/score` (AI scoring), `LEAD_SCORE_CHANGED` outbox event, RBAC-tested |
 | Sales Pipeline | ✅ | ✅ | ✅ | ✅ | Kanban board, stage transitions w/ `closedAt` + Activity logging, RBAC-tested |
 | Tasks / Calendar | ✅ | ✅ | ✅ | ✅ | Full CRUD + complete/reopen actions, month-view calendar, RBAC-tested |
-| AI Workspace / `apps/ai-service` | ✅ | 🟡 | ✅ | ✅ | FastAPI service live (`POST /score-lead`), wired to Leads. `docs/api/ai-service.md` complete. Frontend UI action pending |
-| Workflow Automation | ✅ | ❌ | ✅ | ✅ | Engine live (`automation.engine.ts`), outbox poller (5–10s loop), resume poller running, 75+ AI draft & <70 team review rules, `automation.rbac.test.ts` passed. Visual DAG UI pending |
+| AI Workspace / `apps/ai-service` | ✅ | 🟡 | ✅ | ✅ | FastAPI service live (`POST /score-lead`, `POST /email/draft`), wired to Leads and AI Poller. Frontend UI action pending |
+| Workflow Automation | ✅ | ✅ | ✅ | ✅ | Engine live (`automation.engine.ts`), outbox poller (5–10s loop), AI poller (5s loop), `ACTION_AI` async draft task creation, `LEAD_SCORE_CHANGED` trigger, nested payloads (`entity: {...}`), React Flow visual builder UI complete |
 | Communication Hub | ❌ | ❌ | — | — | Not started |
-| Reports (dedicated module) | ❌ | ❌ | — | — | Not started; Dashboard currently covers headline stats only |
+| Reports (dedicated module) | ✅ | ✅ | ✅ | ✅ | **Done** | `reports.funnel.test.ts` passed — conversion funnel API, RBAC scoping & UI complete |
 | Documents | ❌ | ❌ | — | — | Not modeled |
 | Integrations | ❌ | ❌ | — | — | Not started |
-| CI/CD, Docker, Deployment | ❌ | — | — | — | Not started |
+| CI/CD, Docker, Deployment | 🟡 | — | ✅ | ✅ | **Partial** | Local `docker-compose.yml` and Dockerfiles live with build ARGs; GitHub Actions CI/CD pipeline pending (`.gitkeep`) |
 
-**Overall completion: ~65% of full SRS scope.** Phase 1 (Auth/CRM/Leads/Pipeline), Tasks/Calendar, AI Lead Scoring backend, and Workflow Automation Engine backend are complete.
+**Overall completion: ~75% of full SRS scope.** Phase 1 (Auth/CRM/Leads/Pipeline), Tasks/Calendar, AI Lead Scoring backend, Workflow Automation Engine backend & Visual DAG UI, and local Docker dev setup are complete.
 
 Legend: ✅ done and verified against live repo · 🟡 exists but incomplete/unverified · ❌ not started
 
@@ -57,7 +57,7 @@ Clerk integration, webhook sync, `requireAuth()` resolving `authContext`, org-on
 Full CRUD for both, org-scoped, documented in `docs/api/crm.md`. RBAC-tested via `crm.rbac.test.ts`.
 
 ### ✅ Phase 1C — Lead Management — DONE
-CRUD + `/:id/convert` (atomic transaction: marks lead `CONVERTED`, creates a linked `Deal`) + `/:id/score` (AI qualification scoring via FastAPI). RBAC-tested, documented in `docs/api/leads.md`.
+CRUD + `/:id/convert` (atomic transaction: marks lead `CONVERTED`, creates a linked `Deal`) + `/:id/score` (AI qualification scoring via FastAPI) + `LEAD_SCORE_CHANGED` outbox event emission on score change (deduped). RBAC-tested, documented in `docs/api/leads.md`.
 
 ### ✅ Phase 1D — Sales Pipeline — DONE
 Kanban board (`GET /board`), deal CRUD, dedicated `/:id/stage` endpoint (handles `closedAt` + `DEAL_STAGE_CHANGED` Activity logging). RBAC-tested, documented in `docs/api/pipeline.md`.
@@ -66,34 +66,38 @@ Kanban board (`GET /board`), deal CRUD, dedicated `/:id/stage` endpoint (handles
 Full CRUD, dedicated `/:id/complete` and `/:id/reopen` action endpoints (Activity logging on completion), optional links to Contact/Lead/Deal, month-view calendar backed by `GET /calendar?from&to`. RBAC-tested, documented in `docs/api/tasks.md`.
 
 ### ✅ Phase 4 (backend) — AI Workspace / Lead Scoring — BACKEND DONE
-`apps/ai-service` FastAPI service live (`POST /score-lead`, shared-secret auth). Wired end-to-end to `POST /api/v1/leads/:id/score`. Venv & pycache untracked. Integration tests in `tests/integration/leads.scoring.test.ts`.
+`apps/ai-service` FastAPI service live (`POST /score-lead`, `POST /email/draft`, shared-secret auth). Wired end-to-end to `POST /api/v1/leads/:id/score` and Node `automation.ai-poller.ts`. Venv & pycache untracked. Integration tests in `tests/integration/leads.scoring.test.ts`.
 
 **Remaining to complete AI Workspace:**
 1. Frontend UI — "Score with AI" button on Lead detail / table views.
 2. Dashboard `AIInsightsPanel` wired to real backend AI summary endpoint.
-3. AI content generation / reasoning endpoints for Workflow Automation (`POST /ai/workflow/reason`).
 
-### 🟡 Phase 3 — Workflow Automation Engine — BACKEND DONE, UI PENDING
-**Architecture Decision: Node/Postgres Outbox Engine + LangGraph AI Nodes**
+### ✅ Phase 3 — Workflow Automation Engine & UI — DONE
+**Architecture Decision: Node/Postgres Outbox Engine + LangGraph AI Nodes + React Flow Visual Builder**
 - **Durable Runtime**: Node.js + Postgres (`Workflow`, `WorkflowNode`, `WorkflowEdge`, `WorkflowRun`, `WorkflowRunLog` in Prisma).
 - **Outbox Poller**: Background worker (`automation.outbox-poller.ts`) executing on a 5–10s loop, picking up unprocessed `OutboxEvent` rows (`processedAt == null`).
+- **AI Poller**: Independent background worker (`automation.ai-poller.ts`) running on a 5s loop to resolve pending `ACTION_AI` email draft jobs.
 - **Resume Poller**: Background worker (`automation.resume-poller.ts`) checking `WAITING` runs and scheduled `DELAY` resumptions.
-- **Triggers**: Event-driven (`LEAD_CREATED`, `DEAL_STAGE_CHANGED`, `TASK_OVERDUE`, `ACTIVITY_LOGGED`) + Cron schedules.
+- **Triggers**: Event-driven (`LEAD_CREATED`, `LEAD_STATUS_CHANGED`, `LEAD_SCORE_CHANGED`, `DEAL_STAGE_CHANGED`, `TASK_OVERDUE`, `ACTIVITY_LOGGED`) + Cron schedules.
 - **Node Types**:
   - `TRIGGER`: Starts workflow run.
   - `CONDITION`: Filter/branch on entity attributes or past step outputs.
   - `DELAY`: Durable pause ("wait N hours/days" using scheduler queue).
   - `ACTION_STATIC`: Fixed actions executed by Node (`CREATE_TASK`, `UPDATE_LEAD_STATUS`, `SEND_EMAIL_TEMPLATE`, `SEND_SLACK_WEBHOOK`).
   - `ACTION_AI`: AI-driven steps calling `apps/ai-service` (`AI_DRAFT_EMAIL`, `AI_DECIDE_ESCALATION`, `AI_SUMMARIZE_LEAD`).
-- **Integration Tests**: `automation.rbac.test.ts` verified against live database.
+- **Visual DAG Builder UI**: React Flow canvas (`WorkflowCanvas.tsx`), node configuration drawer (`NodeConfigPanel.tsx`), node palette (`NodePalette.tsx`), and workflow toolbar (`WorkflowToolbar.tsx`).
+- **Integration Tests**: `automation.rbac.test.ts`, `automation.engine.test.ts`, `automation.ai-poller.test.ts`, `automation.lead-score-trigger.test.ts` verified against live database.
 
 #### Key Design Decisions — AI-driven Actions & Human-in-the-Loop Gates
 
-1. **Dual-Path Human Approval Gate (Score >= 75 vs Score < 70):**
-   - **Score >= 75 (High Quality):** AI generates an email draft, created as a pending Task for the assigned sales rep (*"Improve AI Email Draft"*). Once the rep reviews, improves, and clicks **Approve**, the system automatically dispatches the email via SendGrid/SMTP.
-   - **Retry Node & Failure Fallback:** If AI email generation fails, the system executes up to **3 retries** with exponential backoff. If it still fails after 3 attempts, a high-priority UI alert and task are triggered on the team's screen (*"Email Generation Failed - Manually Create Draft"*).
-   - **Score < 70 (Low / Needs Review):** AI routes the lead to a **Team Review Task** for sales managers to audit. If the team approves, the lead is unlocked to proceed to the email outreach service; if rejected, it is marked `UNQUALIFIED`.
-2. **`ACTION_AI` nodes are asynchronous, not blocking.** They use the same `WAITING`/resume mechanism as `DELAY` nodes rather than holding an HTTP connection open across a multi-call LangGraph loop.
+1. **Human-in-the-Loop Draft Task Creation:**
+   - AI drafts an email as a pending `Task` for human review.
+   - Emails are **NEVER** auto-sent in v1 (no SendGrid/SMTP automated dispatch, no score >= 75 auto-send path, no dual-path approval gate). A human always reviews the draft Task and sends manually.
+2. **`ACTION_AI` nodes are asynchronous, not blocking.**
+   - Execution dispatches `POST /email/draft` to `apps/ai-service` (returns 202 with `job_id`) and sets workflow run state to `WAITING` with an `aiJobId`.
+   - The dedicated 5s AI Poller polls `GET /email/draft/{job_id}` and resolves the run upon job completion to create the review Task.
+3. **Consistent Nested Outbox Payloads:**
+   - `LEAD_CREATED`, `LEAD_STATUS_CHANGED`, and `LEAD_SCORE_CHANGED` emit consistent nested `entity: { ... }` structures so `CONDITION` nodes can parse attributes (`entity.score`, `entity.toStatus`, etc.).
 
 ### ❌ Phase 5 — Communication Hub, Reports, Integrations — DEFERRED TO AFTER PHASE 3 & 4
 - **Communication Hub**: Unified interaction log (Email, WhatsApp Cloud API, Twilio SMS).
@@ -106,10 +110,10 @@ Full CRUD, dedicated `/:id/complete` and `/:id/reopen` action endpoints (Activit
 
 | Workstream | Current state | Action |
 |---|---|---|
-| **Testing** | 9 integration test files covering Auth, CRM, Dashboard, Leads (rbac/convert/scoring), Pipeline, Tasks, Automation | Add pytest coverage in `apps/ai-service` |
-| **CI/CD** | `.github/workflows/` empty | GitHub Actions: lint + typecheck + test on PR |
-| **Docker** | `docker/` empty | `docker-compose.yml` for local Postgres + API + ai-service |
-| **Deployment** | Nothing deployed | Vercel (web) + Railway (api + Postgres + ai-service) |
+| **Testing** | 13 test files covering Auth, CRM, Dashboard, Leads (rbac/convert/scoring/outbox-payload), Pipeline, Tasks, Automation (engine/ai-poller/lead-score-trigger/rbac) | Add pytest coverage in `apps/ai-service` |
+| **CI/CD** | `.github/workflows/.gitkeep` pending | GitHub Actions: lint + typecheck + test on PR |
+| **Docker** | ✅ Done — `docker-compose.yml` for local Postgres + API + ai-service + web (with `NEXT_PUBLIC_API_URL` build ARG fix) | Production container hardening |
+| **Deployment** | Local Docker Compose verified | Vercel (web) + Railway (api + Postgres + ai-service) |
 | **Security hardening** | Helmet + rate-limit on Node API; shared-secret auth on ai-service | CSRF protection for cookie-based Clerk sessions, audit logging table |
 | **API client unification** | ✅ Done — `dashboard-api.ts` uses context-aware `apiClient` | — |
 | **Python build hygiene** | ✅ Done — `venv`/`__pycache__` untracked & `.gitignore` updated | — |
@@ -129,9 +133,9 @@ A module is **not done** until all of the following are true:
 
 ## 5. Immediate Next Action
 
-1. **Phase 3 Workflow Automation Frontend**:
-   - Implement visual DAG workflow builder UI using React Flow.
-   - Build trigger setup modal and workflow run execution log viewer.
-2. **AI Workspace Frontend**:
+1. **AI Workspace Frontend**:
    - Add "Score with AI" UI action on Leads frontend table and detail views.
    - Wire `AIInsightsPanel` on the Dashboard to the live AI backend endpoint.
+2. **CI/CD & Cloud Infrastructure**:
+   - Write GitHub Actions workflow for automated testing on PRs.
+
