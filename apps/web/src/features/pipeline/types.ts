@@ -8,6 +8,15 @@ export type DealStage =
   | "WON"
   | "LOST";
 
+export type DealLostReason =
+  | "BUDGET"
+  | "TIMING"
+  | "COMPETITOR"
+  | "NO_RESPONSE"
+  | "NOT_A_FIT"
+  | "OTHER";
+
+
 export interface Deal {
   id: string;
   title: string;

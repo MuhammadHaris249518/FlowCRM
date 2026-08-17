@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { pipelineApi } from "../api/pipeline-api";
 import { useApiContext } from "@/features/auth/hooks/use-api-context";
-import type { CreateDealInput, DealStage, UpdateDealInput } from "../types";
+import type { CreateDealInput, DealStage, UpdateDealInput, DealLostReason } from "../types";
 
 export function usePipelineBoard() {
   const ctx = useApiContext();
@@ -48,9 +48,9 @@ export function useUpdateDealStage() {
   const ctx = useApiContext();
 
   return useMutation({
-    mutationFn: ({ id, stage }: { id: string; stage: DealStage }) =>
-      pipelineApi.updateStage(ctx, id, stage),
-    onMutate: async ({ id, stage }) => {
+    mutationFn: ({ id, stage, lostReason }: { id: string; stage: DealStage; lostReason?: DealLostReason }) =>
+      pipelineApi.updateStage(ctx, id, stage, lostReason),
+    onMutate: async ({ id, stage, lostReason }) => {
       await queryClient.cancelQueries({ queryKey: ["pipeline", "board"] });
       const previous = queryClient.getQueryData(["pipeline", "board", ctx.organizationId]);
 

@@ -7,6 +7,7 @@ import type {
   Paginated,
   UpdateDealInput,
   DealStage,
+  DealLostReason,
 } from "../types";
 
 function toParams(query: Record<string, any>): Record<string, string> {
@@ -32,8 +33,8 @@ export const pipelineApi = {
   update: (ctx: RequestContext, id: string, input: UpdateDealInput) =>
     apiClient.patch<Deal>(`/pipeline/deals/${id}`, ctx, input),
 
-  updateStage: (ctx: RequestContext, id: string, stage: DealStage) =>
-    apiClient.patch<Deal>(`/pipeline/deals/${id}/stage`, ctx, { stage }),
+  updateStage: (ctx: RequestContext, id: string, stage: DealStage, lostReason?: DealLostReason) =>
+    apiClient.patch<Deal>(`/pipeline/deals/${id}/stage`, ctx, { stage, lostReason }),
 
   delete: (ctx: RequestContext, id: string) => apiClient.delete(`/pipeline/deals/${id}`, ctx),
 };

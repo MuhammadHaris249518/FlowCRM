@@ -5,8 +5,9 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { usePipelineBoard, useUpdateDealStage } from "../hooks/use-pipeline";
 import { DealCard } from "./DealCard";
 import { DealFormDialog } from "./DealFormDialog";
+import { LostReasonDialog } from "./LostReasonDialog";
 import { formatCurrency } from "@/lib/utils";
-import type { DealStage } from "../types";
+import type { DealStage, DealLostReason } from "../types";
 
 const STAGE_META: Record<DealStage, { label: string; dot: string }> = {
   NEW: { label: "New", dot: "bg-blue-400" },
@@ -26,6 +27,7 @@ export function PipelineBoard() {
   const updateStage = useUpdateDealStage();
   const [formOpen, setFormOpen] = useState(false);
   const [dragOverStage, setDragOverStage] = useState<DealStage | null>(null);
+  const [pendingLostDealId, setPendingLostDealId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   function scrollByColumns(direction: -1 | 1) {
@@ -41,7 +43,20 @@ export function PipelineBoard() {
     e.preventDefault();
     setDragOverStage(null);
     const dealId = e.dataTransfer.getData("text/plain");
-    if (dealId) updateStage.mutate({ id: dealId, stage });
+    if (!dealId) return;
+    if (stage === "LOST") {
+      setPendingLostDealId(dealId);
+      return;
+    }
+    updateStage.mutate({ id: dealId, stage });
+  }
+
+  function handleConfirmLost(reason: DealLostReason) {
+    if (!pendingLostDealId) return;
+    updateStage.mutate(
+      { id: pendingLostDealId, stage: "LOST", lostReason: reason },
+      { onSettled: () => setPendingLostDealId(null) }
+    );
   }
 
   if (board.isPending) {
@@ -180,6 +195,12 @@ export function PipelineBoard() {
       </div>
 
       <DealFormDialog open={formOpen} onClose={() => setFormOpen(false)} />
+      <LostReasonDialog
+        open={pendingLostDealId !== null}
+        onCancel={() => setPendingLostDealId(null)}
+        onConfirm={handleConfirmLost}
+        isPending={updateStage.isPending}
+      />
     </div>
   );
 }
