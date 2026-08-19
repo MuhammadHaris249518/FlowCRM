@@ -11,10 +11,13 @@ import {
   useTrends,
 } from "@/features/reports/hooks/use-reports";
 import { RangeSelector } from "@/features/dashboard/components/RangeSelector";
+import { useApiContext } from "@/features/auth/hooks/use-api-context";
+import { reportsApi } from "@/features/reports/api/reports-api";
 import type { ReportsRange } from "@/features/reports/types";
 
 export default function ReportsPage() {
   const [range, setRange] = useState<ReportsRange>("this_month");
+  const apiCtx = useApiContext();
   const funnel = useConversionFunnel(range);
   const winLoss = useWinLossReport(range);
   const trends = useTrends(6);
@@ -43,6 +46,15 @@ export default function ReportsPage() {
             <div className="space-y-6">
               {funnel.data && (
                 <>
+                  <div className="flex items-center justify-between">
+                    <div />
+                    <button
+                      onClick={() => reportsApi.exportConversionFunnel(apiCtx, range)}
+                      className="text-xs font-medium text-brand-500 hover:text-brand-600"
+                    >
+                      Export CSV
+                    </button>
+                  </div>
                   <ConversionFunnelChart stages={funnel.data.stages} />
                   {funnel.data.disqualifiedCount > 0 && (
                     <p className="text-xs text-ink-500">
@@ -51,11 +63,37 @@ export default function ReportsPage() {
                   )}
                 </>
               )}
-              {trends.data && <TrendsChart points={trends.data.points} />}
+              {trends.data && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div />
+                    <button
+                      onClick={() => reportsApi.exportTrends(apiCtx, 6)}
+                      className="text-xs font-medium text-brand-500 hover:text-brand-600"
+                    >
+                      Export CSV
+                    </button>
+                  </div>
+                  <TrendsChart points={trends.data.points} />
+                </>
+              )}
             </div>
 
             <div>
-              {winLoss.data && <WinLossPanel report={winLoss.data} />}
+              {winLoss.data && (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <div />
+                    <button
+                      onClick={() => reportsApi.exportWinLoss(apiCtx, range)}
+                      className="text-xs font-medium text-brand-500 hover:text-brand-600"
+                    >
+                      Export CSV
+                    </button>
+                  </div>
+                  <WinLossPanel report={winLoss.data} />
+                </>
+              )}
             </div>
           </div>
         )}

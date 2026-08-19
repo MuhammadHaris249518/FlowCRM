@@ -23,3 +23,16 @@ reportsRouter.get(
   "/trends",
   asyncHandler(reportsController.getTrends)
 );
+
+reportsRouter.get(
+  "/conversion-funnel/export",
+  asyncHandler(reportsController.exportConversionFunnel)
+);
+reportsRouter.get(
+  "/win-loss/export",
+  asyncHandler(reportsController.exportWinLoss)
+);
+reportsRouter.get(
+  "/trends/export",
+  asyncHandler(reportsController.exportTrends)
+);

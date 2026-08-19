@@ -35,6 +35,40 @@ export interface RequestContext {
   organizationId?: string | null;
 }
 
+// For endpoints that return a raw file (CSV, etc.) instead of the JSON
+// envelope — triggers an actual browser download rather than parsing JSON.
+export async function downloadFile(
+  path: string,
+  ctx: RequestContext,
+  params: Record<string, string> | undefined,
+  filename: string
+): Promise<void> {
+  const url = new URL(`${API_BASE_URL}${path}`);
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+  }
+
+  const token = await ctx.getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (ctx.organizationId) headers["X-Organization-Id"] = ctx.organizationId;
+
+  const res = await fetch(url.toString(), { headers, credentials: "include" });
+  if (!res.ok) {
+    throw new ApiError("EXPORT_FAILED", "Couldn't download the file. Please try again.", res.status);
+  }
+
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(blobUrl);
+}
+
 async function request<T>(
   method: "GET" | "POST" | "PATCH" | "DELETE",
   path: string,
