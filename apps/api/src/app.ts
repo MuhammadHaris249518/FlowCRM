@@ -13,6 +13,8 @@ import { pipelineRouter } from "./modules/pipeline/pipeline.routes";
 import { tasksRouter } from "./modules/tasks/tasks.routes";
 import { automationRouter } from "./modules/automation/automation.routes";
 import { reportsRouter } from "./modules/reports/reports.routes";
+import { communicationRouter } from "./modules/communication/communication.routes";
+import { sendgridWebhookRouter } from "./modules/communication/webhooks/sendgrid.webhook";
 export function createApp() {
   const app = express();
 
@@ -42,6 +44,9 @@ export function createApp() {
   // express.raw() itself, but only works if the global JSON parser hasn't
   // already consumed the body first).
   app.use("/api/v1/webhooks/clerk", clerkWebhookRouter);
+  // SendGrid Inbound Parse posts multipart form data — also needs to be
+  // mounted before express.json(), same reasoning as the Clerk webhook.
+  app.use("/api/v1/webhooks/sendgrid", sendgridWebhookRouter);
 
   app.use(express.json());
 
@@ -81,6 +86,7 @@ export function createApp() {
   app.use("/api/v1/automation", automationRouter);
   app.use("/api/v1/tasks", tasksRouter);
   app.use("/api/v1/reports", reportsRouter);
+  app.use("/api/v1/communication", communicationRouter);
 
   // Must be registered last — Express matches error middleware by arity (4 args).
   app.use(errorHandler);

@@ -219,14 +219,45 @@ export async function resolveAiNode(run: WorkflowRun, workflow: WorkflowWithGrap
 
   if (status.status === "completed" && status.result) {
     const context = run.context as Record<string, unknown>;
+    const organizationId = context.organizationId as string;
+    const leadId = context.entityType === "Lead" ? (context.entityId as string) : undefined;
+    const dealId = context.entityType === "Deal" ? (context.entityId as string) : undefined;
+
+    // Resolve a recipient address so the eventual "Send" action has
+    // somewhere to send to — best-effort, Phase 1 doesn't hard-fail if
+    // there isn't one, the Task description still shows the draft either way.
+    let toAddress: string | null = null;
+    if (leadId) {
+      const lead = await prisma.lead.findUnique({ where: { id: leadId }, include: { contact: true } });
+      toAddress = lead?.contact?.email ?? null;
+    } else if (dealId) {
+      const deal = await prisma.deal.findUnique({ where: { id: dealId }, include: { contact: true } });
+      toAddress = deal?.contact?.email ?? null;
+    }
+
+    const draftMessage = await prisma.message.create({
+      data: {
+        organizationId,
+        leadId,
+        dealId,
+        channel: "EMAIL",
+        direction: "OUTBOUND",
+        status: "DRAFT",
+        subject: status.result.subject,
+        body: status.result.body,
+        toAddress,
+      },
+    });
+
     await prisma.task.create({
       data: {
-        organizationId: context.organizationId as string,
+        organizationId,
         title: `Review AI-drafted email: ${status.result.subject}`,
-        description: `To: ${context.entityType} ${context.entityId}\n\nSubject: ${status.result.subject}\n\n${status.result.body}\n\n---\nDrafted by AI (${status.result.revisionCount} revision(s)). Review and send manually — not auto-sent.`,
-        leadId: context.entityType === "Lead" ? (context.entityId as string) : undefined,
-        dealId: context.entityType === "Deal" ? (context.entityId as string) : undefined,
+        description: `To: ${context.entityType} ${context.entityId}\n\nSubject: ${status.result.subject}\n\n${status.result.body}\n\n---\nDrafted by AI (${status.result.revisionCount} revision(s)). Review and send via the linked draft — not auto-sent.`,
+        leadId,
+        dealId,
         priority: "MEDIUM",
+        messageId: draftMessage.id,
       },
     });
 
