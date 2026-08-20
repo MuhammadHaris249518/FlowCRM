@@ -34,3 +34,10 @@ export interface Activity {
   actorName: string | null;
   createdAt: string;
 }
+
+export interface AIInsights {
+  followUpLeadsCount: number;
+  stuckDealsCount: number;
+  overdueTasksCount: number;
+  summary: string;
+}

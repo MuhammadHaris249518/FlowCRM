@@ -33,3 +33,13 @@ export function useRecentActivities(limit = 10) {
     refetchInterval: 30_000,
   });
 }
+
+export function useAiInsights() {
+  const ctx = useApiContext();
+  return useQuery({
+    queryKey: ["dashboard", "ai-insights", ctx.organizationId],
+    queryFn: () => dashboardApi.getAiInsights(ctx),
+    enabled: Boolean(ctx.organizationId),
+    staleTime: 60_000,
+  });
+}

@@ -1,6 +1,7 @@
 import { apiClient, type RequestContext } from "@/lib/api-client";
 import type {
   Activity,
+  AIInsights,
   DashboardRange,
   DashboardSummary,
   PipelineOverview,
@@ -17,4 +18,7 @@ export const dashboardApi = {
     apiClient.get<Activity[]>("/dashboard/recent-activities", ctx, {
       limit: String(limit),
     }),
+
+  getAiInsights: (ctx: RequestContext) =>
+    apiClient.get<AIInsights>("/dashboard/ai-insights", ctx),
 };

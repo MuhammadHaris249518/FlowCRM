@@ -92,4 +92,42 @@ export const dashboardRepository = {
       include: { actor: { select: { fullName: true } } },
     });
   },
+
+  // "Needs follow-up" = still in an early, unresolved status and nobody's
+  // touched it in a while. QUALIFIED/CONVERTED/DISQUALIFIED are excluded —
+  // those are past the point where "follow up" is the right verb.
+  async getFollowUpLeadsCount(auth: AuthContext, staleDays: number) {
+    const staleSince = new Date(Date.now() - staleDays * 24 * 60 * 60 * 1000);
+    return prisma.lead.count({
+      where: {
+        ...scopeFilter(auth),
+        status: { in: ["NEW", "CONTACTED"] },
+        updatedAt: { lt: staleSince },
+      },
+    });
+  },
+
+  // Any deal not yet WON or LOST that hasn't moved stage (or been touched
+  // at all) in staleDays — generalizes "stuck in Proposal for 5 days" to
+  // any active stage, not just Proposal specifically.
+  async getStuckDealsCount(auth: AuthContext, staleDays: number) {
+    const staleSince = new Date(Date.now() - staleDays * 24 * 60 * 60 * 1000);
+    return prisma.deal.count({
+      where: {
+        ...scopeFilter(auth),
+        stage: { notIn: ["WON", "LOST"] },
+        updatedAt: { lt: staleSince },
+      },
+    });
+  },
+
+  async getOverdueTasksCount(auth: AuthContext) {
+    return prisma.task.count({
+      where: {
+        ...scopeFilter(auth),
+        completedAt: null,
+        dueAt: { lt: new Date() },
+      },
+    });
+  },
 };

@@ -26,4 +26,10 @@ export const dashboardController = {
     const data = await dashboardService.getRecentActivities(req.authContext, query.limit);
     res.json({ success: true, data });
   },
+
+  async getAiInsights(req: Request, res: Response) {
+    if (!req.authContext) throw AppError.unauthorized();
+    const data = await dashboardService.getAiInsights(req.authContext);
+    res.json({ success: true, data });
+  },
 };

@@ -3,10 +3,14 @@ import { dashboardRepository, periodBounds } from "./dashboard.repository";
 import type { DashboardSummaryQuery } from "./dashboard.validation";
 import type {
   ActivityDTO,
+  AIInsightsDTO,
   DashboardSummaryDTO,
   PipelineOverviewDTO,
   StatCardDTO,
 } from "./dashboard.types";
+
+const FOLLOW_UP_STALE_DAYS = 2;
+const STUCK_DEAL_STALE_DAYS = 5;
 
 function percentDelta(current: number, previous: number): number {
   if (previous === 0) return current > 0 ? 100 : 0;
@@ -84,4 +88,44 @@ export const dashboardService = {
       createdAt: activity.createdAt.toISOString(),
     }));
   },
+
+  async getAiInsights(auth: AuthContext): Promise<AIInsightsDTO> {
+    const [followUpLeadsCount, stuckDealsCount, overdueTasksCount] = await Promise.all([
+      dashboardRepository.getFollowUpLeadsCount(auth, FOLLOW_UP_STALE_DAYS),
+      dashboardRepository.getStuckDealsCount(auth, STUCK_DEAL_STALE_DAYS),
+      dashboardRepository.getOverdueTasksCount(auth),
+    ]);
+
+    const summary = buildInsightsSummary(followUpLeadsCount, stuckDealsCount, overdueTasksCount);
+
+    return { followUpLeadsCount, stuckDealsCount, overdueTasksCount, summary };
+  },
 };
+
+function buildInsightsSummary(
+  followUpLeads: number,
+  stuckDeals: number,
+  overdueTasks: number
+): string {
+  const parts: string[] = [];
+  if (followUpLeads > 0) {
+    parts.push(`${followUpLeads} lead${followUpLeads === 1 ? "" : "s"} to follow up`);
+  }
+  if (stuckDeals > 0) {
+    parts.push(
+      `${stuckDeals} deal${stuckDeals === 1 ? "" : "s"} stuck for over ${STUCK_DEAL_STALE_DAYS} days`
+    );
+  }
+  if (overdueTasks > 0) {
+    parts.push(`${overdueTasks} overdue task${overdueTasks === 1 ? "" : "s"}`);
+  }
+
+  if (parts.length === 0) {
+    return "You're all caught up — no stale leads, stuck deals, or overdue tasks right now.";
+  }
+  if (parts.length === 1) {
+    return `You have ${parts[0]}.`;
+  }
+  const last = parts.pop();
+  return `You have ${parts.join(", ")}, and ${last}.`;
+}

@@ -32,3 +32,11 @@ export interface ActivityDTO {
   actorName: string | null;
   createdAt: string;
 }
+
+export interface AIInsightsDTO {
+  followUpLeadsCount: number;
+  stuckDealsCount: number;
+  overdueTasksCount: number;
+  summary: string;
+}
+

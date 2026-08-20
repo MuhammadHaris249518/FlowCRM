@@ -78,6 +78,29 @@ Returns deal count and total value grouped by pipeline stage.
 }
 ```
 
+## GET /ai-insights
+
+Returns real-time counts driving the Dashboard's "AI Assistant" panel —
+pure data aggregation, no LLM call involved (this endpoint doesn't touch
+`apps/ai-service`).
+
+**Response `200`**
+
+```json
+{
+  "success": true,
+  "data": {
+    "followUpLeadsCount": 12,
+    "stuckDealsCount": 3,
+    "overdueTasksCount": 2,
+    "summary": "You have 12 leads to follow up, 3 deals stuck for over 5 days, and 2 overdue tasks."
+  }
+}
+```
+
+"Follow-up" leads: status `NEW` or `CONTACTED`, not updated in 2+ days.
+"Stuck" deals: not `WON`/`LOST`, not updated in 5+ days.
+
 ## Error envelope (all endpoints)
 
 ```json

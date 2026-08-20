@@ -8,6 +8,7 @@ import { RecentActivityFeed } from "@/features/dashboard/components/RecentActivi
 import { AIInsightsPanel } from "@/features/dashboard/components/AIInsightsPanel";
 import { RangeSelector } from "@/features/dashboard/components/RangeSelector";
 import {
+  useAiInsights,
   useDashboardSummary,
   usePipelineOverview,
   useRecentActivities,
@@ -20,6 +21,7 @@ export default function DashboardPage() {
   const summary = useDashboardSummary(range);
   const pipeline = usePipelineOverview();
   const activities = useRecentActivities(5);
+  const insights = useAiInsights();
 
   return (
     <>
@@ -41,7 +43,9 @@ export default function DashboardPage() {
         {pipeline.data && <PipelineOverview stages={pipeline.data.stages} />}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <AIInsightsPanel />
+          {insights.isPending && <SectionSkeleton />}
+          {insights.isError && <ErrorState message="Couldn't load AI insights." />}
+          {insights.data && <AIInsightsPanel insights={insights.data} />}
 
           {activities.isPending && <SectionSkeleton />}
           {activities.isError && <ErrorState message="Couldn't load recent activity." />}

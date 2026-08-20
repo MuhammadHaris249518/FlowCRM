@@ -19,3 +19,4 @@ dashboardRouter.get(
   "/recent-activities",
   asyncHandler(dashboardController.getRecentActivities)
 );
+dashboardRouter.get("/ai-insights", asyncHandler(dashboardController.getAiInsights));
