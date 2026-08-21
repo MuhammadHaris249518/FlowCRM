@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Pencil, Plus, Search, Sparkles, Trash2 } from "lucide-react";
+import { Check, MessageSquare, Pencil, Plus, Search, Sparkles, Trash2 } from "lucide-react";
 import { ApiError } from "@/lib/api-client";
 import { useDeleteLead, useLeads, useScoreLead } from "../hooks/use-leads";
 import { LeadFormDialog } from "./LeadFormDialog";
 import { ConvertLeadDialog } from "./ConvertLeadDialog";
+import { LeadMessagesDialog } from "./LeadMessagesDialog";
 import type { Lead, LeadStatus } from "../types";
 
 const STATUS_OPTIONS: { value: LeadStatus | ""; label: string }[] = [
@@ -83,6 +84,8 @@ export function LeadsTable() {
 
   const [convertingLead, setConvertingLead] = useState<Lead | null>(null);
   const handleConvert = (lead: Lead) => setConvertingLead(lead);
+
+  const [messagingLead, setMessagingLead] = useState<Lead | null>(null);
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-card">
@@ -190,6 +193,14 @@ export function LeadsTable() {
                           aria-hidden
                         />
                       </button>
+                      <button
+                        onClick={() => setMessagingLead(lead)}
+                        aria-label="View messages"
+                        title="View messages"
+                        className="text-ink-300 hover:text-brand-500"
+                      >
+                        <MessageSquare className="h-4 w-4" aria-hidden />
+                      </button>
                       {lead.status !== "CONVERTED" && (
                         <button
                           onClick={() => handleConvert(lead)}
@@ -246,6 +257,7 @@ export function LeadsTable() {
 
       <LeadFormDialog open={dialogOpen} onClose={() => setDialogOpen(false)} lead={dialogLead} />
       <ConvertLeadDialog lead={convertingLead} onClose={() => setConvertingLead(null)} />
+      <LeadMessagesDialog lead={messagingLead} onClose={() => setMessagingLead(null)} />
     </div>
   );
 }

@@ -13,6 +13,15 @@ export function useLeads(query: LeadQuery) {
   });
 }
 
+export function useLead(id: string) {
+  const ctx = useApiContext();
+  return useQuery({
+    queryKey: ["leads", "detail", id, ctx.organizationId],
+    queryFn: () => leadsApi.getById(ctx, id),
+    enabled: Boolean(ctx.organizationId) && Boolean(id),
+  });
+}
+
 export function useCreateLead() {
   const queryClient = useQueryClient();
   const ctx = useApiContext();
