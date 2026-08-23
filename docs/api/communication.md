@@ -1,8 +1,6 @@
 # Communication API
 
-**Phase 1 scope: email only.** SMS and WhatsApp are planned but not
-implemented — the `channel` field on `Message` already supports them,
-no future migration needed for that part.
+**Phase 2 scope: email + SMS.** WhatsApp is planned but not implemented.
 
 Base path: `/api/v1/communication`. All routes require
 `Authorization: Bearer <clerk_session_token>`.
@@ -27,6 +25,17 @@ endpoint is what the Task's (future) "Send" button calls.
 `400 MISSING_RECIPIENT` if there's no `toAddress` on the message,
 `400 SEND_FAILED` if SendGrid rejects the send (message is marked `FAILED`, not deleted).
 
+## POST /webhooks/twilio-sms (Twilio → this app)
+
+Not called by a FlowCRM client — Twilio calls this when an SMS is received
+at your configured number. Records an inbound `Message` with `channel: SMS`,
+best-effort-linked to a `Contact` by matching phone number.
+
+**Known Phase 2 limitations, same shape as the SendGrid webhook:** no
+`X-Twilio-Signature` verification yet, and `DEFAULT_ORG_ID_FOR_INBOUND_SMS`
+is a single hardcoded org — real per-tenant routing (e.g. by which Twilio
+number received the text) is follow-up work.
+
 ## POST /webhooks/sendgrid (SendGrid Inbound Parse → this app)
 
 Not called by a FlowCRM client — SendGrid calls this when an email is
@@ -37,3 +46,4 @@ best-effort-linked to a `Contact` by matching the sender's email address.
 yet, and no per-tenant inbound routing (`DEFAULT_ORG_ID_FOR_INBOUND_EMAIL`
 is a single hardcoded org for now). Both need real solutions before this
 handles production traffic — flagged, not hidden.
+

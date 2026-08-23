@@ -44,6 +44,7 @@ export const communicationRepository = {
     organizationId: string;
     contactId: string | null;
     leadId: string | null;
+    channel: "EMAIL" | "SMS";
     fromAddress: string;
     toAddress: string;
     subject: string | null;
@@ -53,11 +54,14 @@ export const communicationRepository = {
     return prisma.message.create({
       data: {
         ...data,
-        channel: "EMAIL",
         direction: "INBOUND",
         status: "RECEIVED",
         receivedAt: new Date(),
       },
     });
+  },
+
+  async findContactByPhone(organizationId: string, phone: string) {
+    return prisma.contact.findFirst({ where: { organizationId, phone } });
   },
 };
