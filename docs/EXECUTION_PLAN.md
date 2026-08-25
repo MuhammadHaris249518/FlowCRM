@@ -1,10 +1,21 @@
 # FlowCRM AI — Execution Plan
 
-**Status as of:** August 14, 2026 (post Workflow Automation Engine, AI Poller & Visual DAG Builder UI Implementation)  
-**Owner:** Muhammad Haris  
-**Architect/Engineer:** Antigravity (this project)  
+**This is the single, only status document for this project.** Do not
+create a second one (`v1.md`, `STATUS.md`, `PROGRESS.md`, or similar) —
+that's exactly how this document went stale for as long as it did last
+time. If a status write-up is needed for an external audience, generate
+it from this file at the time it's needed rather than maintaining a
+parallel copy.
 
-This document is the single source of truth for sequencing. It is re-verified against the live repository code each time it's updated — see `docs/api/*.md` for per-module contracts.
+**Status as of:** current session — re-verified against a fresh pull of
+`master`, not agent self-report.
+**Owner:** Muhammad Haris
+**Architect/Engineer:** Claude (this project)
+
+This document is the single source of truth for sequencing. It is
+re-verified against the live `master` branch (tarball audit, not agent
+self-report) each time it's updated — see `docs/api/*.md` for per-module
+contracts.
 
 ---
 
@@ -12,22 +23,25 @@ This document is the single source of truth for sequencing. It is re-verified ag
 
 | Module | Backend | Frontend | Tests | Docs | Status |
 |---|---|---|---|---|---|
-| Homepage / Marketing | — | ✅ | — | — | **Done** |
+| Homepage / Marketing | — | ✅ | — | — | Done |
 | Authentication (Clerk) | ✅ | ✅ | ✅ | — | Real session verification, org-on-signup, webhook sync, RBAC middleware all live |
-| Dashboard | ✅ | ✅ | ✅ | ✅ | `dashboard.rbac.test.ts` exists — RBAC-tested |
-| CRM (Companies & Contacts) | ✅ | ✅ | ✅ | ✅ | `crm.rbac.test.ts` exists — RBAC-tested |
-| Leads | ✅ | ✅ | ✅ | ✅ | Full CRUD + `/convert` (transactional) + `/:id/score` (AI scoring), `LEAD_SCORE_CHANGED` outbox event, RBAC-tested |
-| Sales Pipeline | ✅ | ✅ | ✅ | ✅ | Kanban board, stage transitions w/ `closedAt` + Activity logging, RBAC-tested |
-| Tasks / Calendar | ✅ | ✅ | ✅ | ✅ | Full CRUD + complete/reopen actions, month-view calendar, RBAC-tested |
-| AI Workspace / `apps/ai-service` | ✅ | 🟡 | ✅ | ✅ | FastAPI service live (`POST /score-lead`, `POST /email/draft`), wired to Leads and AI Poller. Frontend UI action pending |
-| Workflow Automation | ✅ | ✅ | ✅ | ✅ | Engine live (`automation.engine.ts`), outbox poller (5–10s loop), AI poller (5s loop), `ACTION_AI` async draft task creation, `LEAD_SCORE_CHANGED` trigger, nested payloads (`entity: {...}`), React Flow visual builder UI complete |
-| Communication Hub | ❌ | ❌ | — | — | Not started |
-| Reports (dedicated module) | ✅ | ✅ | ✅ | ✅ | **Done** | `reports.funnel.test.ts` passed — conversion funnel API, RBAC scoping & UI complete |
+| Dashboard | ✅ | ✅ | ✅ | ✅ | Includes AI Insights panel wired to real lead/deal/task counts (no LLM call — pure data aggregation) |
+| CRM (Companies & Contacts) | ✅ | ✅ | ✅ | ✅ | RBAC-tested |
+| Leads | ✅ | ✅ | ✅ | ✅ | Full CRUD + `/convert` (transactional) + `/:id/score` (AI scoring, reasoning surfaced in UI) + `LEAD_SCORE_CHANGED` outbox event |
+| Sales Pipeline | ✅ | ✅ | ✅ | ✅ | Kanban board, stage transitions w/ `closedAt` + Activity logging |
+| Tasks / Calendar | ✅ | ✅ | ✅ | ✅ | Full CRUD + complete/reopen, month-view calendar |
+| AI Workspace / `apps/ai-service` | ✅ | ✅ | ✅ | ✅ | **Fully done.** FastAPI service (`/score-lead`, `/email/draft`), Score-with-AI button with loading/reasoning-tooltip/error states, LangGraph Evaluator-Optimizer email loop |
+| Workflow Automation | ✅ | ✅ | ✅ | ✅ | Outbox + AI + resume pollers, `TRIGGER`/`CONDITION`/`DELAY`/`ACTION_STATIC`/`ACTION_AI` node types, React Flow visual builder |
+| **Communication Hub** | ✅ | ✅ | ❌ | ✅ | **Email (Phase 1) + SMS (Phase 2) both live** — SendGrid + Twilio send/receive, conversation thread UI (`ConversationThreadBox`, per-Lead messages page), Send button auto-completes linked AI-draft Tasks. **Zero automated test coverage — manual verification only, a real gap.** WhatsApp (Phase 3) not started. |
+| Reports | ✅ | ✅ | ✅ | — | Funnel, win/loss, CSV export — `reports.funnel.test.ts`, `reports.win-loss.test.ts`, `reports.export.test.ts`, `reports.csv.test.ts`, `reports.trends.test.ts` |
 | Documents | ❌ | ❌ | — | — | Not modeled |
-| Integrations | ❌ | ❌ | — | — | Not started |
-| CI/CD, Docker, Deployment | 🟡 | — | ✅ | ✅ | **Partial** | Local `docker-compose.yml` and Dockerfiles live with build ARGs; GitHub Actions CI/CD pipeline pending (`.gitkeep`) |
+| Integrations | ❌ | ❌ | — | — | Not started (Stripe billing, external calendar sync) |
+| CI/CD, Docker, Deployment | 🟡 | — | — | — | Local `docker-compose.yml` + Dockerfiles live; GitHub Actions still just `.gitkeep` |
 
-**Overall completion: ~75% of full SRS scope.** Phase 1 (Auth/CRM/Leads/Pipeline), Tasks/Calendar, AI Lead Scoring backend, Workflow Automation Engine backend & Visual DAG UI, and local Docker dev setup are complete.
+**Overall completion: ~85% of full SRS scope.** Every core CRM module,
+AI Workspace, Workflow Automation, and Communication Hub (email + SMS)
+are done. Remaining: WhatsApp channel, Documents, Integrations/billing,
+CI/CD.
 
 Legend: ✅ done and verified against live repo · 🟡 exists but incomplete/unverified · ❌ not started
 
@@ -35,74 +49,90 @@ Legend: ✅ done and verified against live repo · 🟡 exists but incomplete/un
 
 ## 1. Guiding Principles (recap — do not deviate)
 
-- **Architecture before code**, every module: business requirement → affected modules → DB design → API design → backend → frontend → validation → error handling → tests → docs.
-- **Layering is fixed**: `routes → controller → service → repository → Prisma`. Every module follows this exactly — no shortcuts that skip the service or repository layer.
-- **RBAC scoping happens in the repository layer**, via `AuthContext` (`userId`, `organizationId`, `role`) — `SALES_REP` scoping is enforced with a `scopeFilter()`-style function in every repository, never left to the route.
-- **Side-effecting state changes get dedicated action endpoints**, not generic PATCH — established by Pipeline's `PATCH /:id/stage`, Tasks' `PATCH /:id/complete`, and Leads' `POST /:id/score`. Any field whose change writes an Activity log or triggers a cascading effect must have its own route.
-- **The AI service never touches Prisma or the DB directly** — Node is the only caller, authenticating with `X-Internal-Service-Key` against a shared secret (no second Clerk integration in Python). Confirmed in `apps/ai-service/app/core/security.py`.
-- **Workflow State & Outbox stay in Node + Postgres** — Node owns the durable workflow runtime (`WorkflowRun`, `WorkflowStepLog`, scheduling, delay timers, and RBAC scoping). `apps/ai-service` (FastAPI + LangGraph) is called statelessly for steps requiring AI drafting, LLM reasoning, or intelligent branching.
-- **Lead scoring sends boolean signals, not raw PII** — confirmed in `apps/api/src/modules/leads/leads.service.ts`: payload to `ai-service` uses boolean flags (`hasFullName`, `hasEmail`, `hasPhone`), never raw PII.
-- **No module is "done" without**: migration run against a real DB, at least one integration test hitting the actual endpoint, and `docs/api/<module>.md` written.
-- **No dead UI affordances** — a button either goes somewhere real or doesn't exist yet.
-- **Never trust an agent's self-reported completion** — status is verified against live repo files.
+- **Architecture before code**, every module: business requirement → affected
+  modules → DB design → API design → backend → frontend → validation → error
+  handling → tests → docs.
+- **Layering is fixed**: `routes → controller → service → repository → Prisma`.
+- **RBAC scoping happens in the repository layer**, via `AuthContext`
+  (`userId`, `organizationId`, `role`).
+- **Side-effecting state changes get dedicated action endpoints**, not
+  generic PATCH — `PATCH /:id/stage`, `PATCH /:id/complete`,
+  `POST /:id/score`, `POST /communication/messages/:id/send`.
+- **The AI service never touches Prisma or the DB directly** — Node is the
+  only caller, `X-Internal-Service-Key` shared secret.
+- **Workflow state & the outbox stay in Node + Postgres.** `apps/ai-service`
+  is called statelessly for AI reasoning steps only.
+- **Lead scoring sends boolean signals, not raw PII.**
+- **AI-drafted content is always human-approved, never auto-sent.** Applies
+  to both the email loop and any future channel — SMS drafts follow the
+  identical `DRAFT` → review Task → manual Send pattern, no exceptions.
+- **`ACTION_AI` nodes are asynchronous** via the same `WAITING`/resume
+  mechanism as `DELAY` nodes.
+- **No module is "done" without**: migration run against a real DB, at
+  least one integration test hitting the actual endpoint, and
+  `docs/api/<module>.md` written. **Communication Hub is the one
+  exception on file right now** — it's functionally complete but has no
+  automated tests yet; tracked as real debt, not silently ignored.
+- **No dead UI affordances.**
+- **Never trust an agent's self-reported completion** — every status here
+  is verified by re-pulling the `master` tarball and reading the actual
+  files.
 
 ---
 
 ## 2. Phase-by-Phase Plan
 
 ### ✅ Phase 1A — Authentication — DONE
-Clerk integration, webhook sync, `requireAuth()` resolving `authContext`, org-on-signup, RBAC middleware. Verified via `auth.middleware.test.ts`.
-
 ### ✅ Phase 1B — CRM (Contacts & Companies) — DONE
-Full CRUD for both, org-scoped, documented in `docs/api/crm.md`. RBAC-tested via `crm.rbac.test.ts`.
-
 ### ✅ Phase 1C — Lead Management — DONE
-CRUD + `/:id/convert` (atomic transaction: marks lead `CONVERTED`, creates a linked `Deal`) + `/:id/score` (AI qualification scoring via FastAPI) + `LEAD_SCORE_CHANGED` outbox event emission on score change (deduped). RBAC-tested, documented in `docs/api/leads.md`.
-
 ### ✅ Phase 1D — Sales Pipeline — DONE
-Kanban board (`GET /board`), deal CRUD, dedicated `/:id/stage` endpoint (handles `closedAt` + `DEAL_STAGE_CHANGED` Activity logging). RBAC-tested, documented in `docs/api/pipeline.md`.
+### ✅ Phase 2 — Tasks & Calendar — DONE
+### ✅ Phase 4 — AI Workspace / Lead Scoring — DONE
 
-### ✅ Phase 2 (partial) — Tasks & Calendar — DONE
-Full CRUD, dedicated `/:id/complete` and `/:id/reopen` action endpoints (Activity logging on completion), optional links to Contact/Lead/Deal, month-view calendar backed by `GET /calendar?from&to`. RBAC-tested, documented in `docs/api/tasks.md`.
-
-### ✅ Phase 4 (backend) — AI Workspace / Lead Scoring — BACKEND DONE
-`apps/ai-service` FastAPI service live (`POST /score-lead`, `POST /email/draft`, shared-secret auth). Wired end-to-end to `POST /api/v1/leads/:id/score` and Node `automation.ai-poller.ts`. Venv & pycache untracked. Integration tests in `tests/integration/leads.scoring.test.ts`.
-
-**Remaining to complete AI Workspace:**
-1. Frontend UI — "Score with AI" button on Lead detail / table views.
-2. Dashboard `AIInsightsPanel` wired to real backend AI summary endpoint.
+Backend and frontend both verified: FastAPI service, `/:id/score` wired
+end-to-end, Score-with-AI button with reasoning tooltip and error states,
+`docs/api/ai-service.md` and `docs/api/leads.md` both accurate.
 
 ### ✅ Phase 3 — Workflow Automation Engine & UI — DONE
-**Architecture Decision: Node/Postgres Outbox Engine + LangGraph AI Nodes + React Flow Visual Builder**
-- **Durable Runtime**: Node.js + Postgres (`Workflow`, `WorkflowNode`, `WorkflowEdge`, `WorkflowRun`, `WorkflowRunLog` in Prisma).
-- **Outbox Poller**: Background worker (`automation.outbox-poller.ts`) executing on a 5–10s loop, picking up unprocessed `OutboxEvent` rows (`processedAt == null`).
-- **AI Poller**: Independent background worker (`automation.ai-poller.ts`) running on a 5s loop to resolve pending `ACTION_AI` email draft jobs.
-- **Resume Poller**: Background worker (`automation.resume-poller.ts`) checking `WAITING` runs and scheduled `DELAY` resumptions.
-- **Triggers**: Event-driven (`LEAD_CREATED`, `LEAD_STATUS_CHANGED`, `LEAD_SCORE_CHANGED`, `DEAL_STAGE_CHANGED`, `TASK_OVERDUE`, `ACTIVITY_LOGGED`) + Cron schedules.
-- **Node Types**:
-  - `TRIGGER`: Starts workflow run.
-  - `CONDITION`: Filter/branch on entity attributes or past step outputs.
-  - `DELAY`: Durable pause ("wait N hours/days" using scheduler queue).
-  - `ACTION_STATIC`: Fixed actions executed by Node (`CREATE_TASK`, `UPDATE_LEAD_STATUS`, `SEND_EMAIL_TEMPLATE`, `SEND_SLACK_WEBHOOK`).
-  - `ACTION_AI`: AI-driven steps calling `apps/ai-service` (`AI_DRAFT_EMAIL`, `AI_DECIDE_ESCALATION`, `AI_SUMMARIZE_LEAD`).
-- **Visual DAG Builder UI**: React Flow canvas (`WorkflowCanvas.tsx`), node configuration drawer (`NodeConfigPanel.tsx`), node palette (`NodePalette.tsx`), and workflow toolbar (`WorkflowToolbar.tsx`).
-- **Integration Tests**: `automation.rbac.test.ts`, `automation.engine.test.ts`, `automation.ai-poller.test.ts`, `automation.lead-score-trigger.test.ts` verified against live database.
 
-#### Key Design Decisions — AI-driven Actions & Human-in-the-Loop Gates
+Outbox poller, AI poller, resume poller; `TRIGGER`/`CONDITION`/`DELAY`/
+`ACTION_STATIC`/`ACTION_AI` node types; React Flow visual builder
+(`WorkflowCanvas.tsx`, `NodeConfigPanel.tsx`, `NodePalette.tsx`,
+`WorkflowToolbar.tsx`). `ACTION_AI` dispatches to `apps/ai-service`
+asynchronously (`WAITING` state, same mechanism as `DELAY`), creates a
+draft Task on completion — never auto-sends. Full design in
+`docs/architecture/workflow-automation.md`.
 
-1. **Human-in-the-Loop Draft Task Creation:**
-   - AI drafts an email as a pending `Task` for human review.
-   - Emails are **NEVER** auto-sent in v1 (no SendGrid/SMTP automated dispatch, no score >= 75 auto-send path, no dual-path approval gate). A human always reviews the draft Task and sends manually.
-2. **`ACTION_AI` nodes are asynchronous, not blocking.**
-   - Execution dispatches `POST /email/draft` to `apps/ai-service` (returns 202 with `job_id`) and sets workflow run state to `WAITING` with an `aiJobId`.
-   - The dedicated 5s AI Poller polls `GET /email/draft/{job_id}` and resolves the run upon job completion to create the review Task.
-3. **Consistent Nested Outbox Payloads:**
-   - `LEAD_CREATED`, `LEAD_STATUS_CHANGED`, and `LEAD_SCORE_CHANGED` emit consistent nested `entity: { ... }` structures so `CONDITION` nodes can parse attributes (`entity.score`, `entity.toStatus`, etc.).
+### ✅ Phase 6 — Communication Hub (Email + SMS) — DONE, TESTS PENDING
 
-### ❌ Phase 5 — Communication Hub, Reports, Integrations — DEFERRED TO AFTER PHASE 3 & 4
-- **Communication Hub**: Unified interaction log (Email, WhatsApp Cloud API, Twilio SMS).
-- **Dedicated Reports Module**: Exportable metrics, conversion funnel analysis, win/loss reports, historical trend tracking.
-- **Integrations & Billing**: Stripe subscription management, external calendar sync.
+**Phase 1 (Email) — done:** `Message` model, SendGrid client, `POST
+/communication/messages/:id/send`, SendGrid Inbound Parse webhook,
+conversation thread UI (`ConversationThreadBox`, `MessageBubble`,
+`LeadMessagesDialog`, `/leads/[id]/messages` page). The `ACTION_AI` email
+loop now creates a real linked `DRAFT` `Message` alongside its review
+Task — sending it completes the Task automatically.
+
+**Phase 2 (SMS) — done:** `MessageChannel.SMS` added, Twilio client,
+`sendDraft` branches by channel (SendGrid vs Twilio, same downstream
+Activity-logging/Task-completion logic either way), Twilio inbound
+webhook. No frontend changes needed — the UI is channel-agnostic by
+design.
+
+**Known gaps, not hidden:**
+- **No automated tests for this module at all** — every verification so
+  far has been manual (`curl` + checking a real inbox/phone). This is the
+  top testing priority right now.
+- No webhook signature verification (SendGrid or Twilio) — flagged in
+  both webhook files' comments and in `docs/api/communication.md`.
+- Single hardcoded `DEFAULT_ORG_ID_FOR_INBOUND_EMAIL`/`_SMS` — no real
+  per-tenant inbound routing yet.
+- `toE164()`'s default country code is an unverified placeholder.
+
+**Not started:** WhatsApp (Phase 3 of this module).
+
+### ❌ Phase 5 — Documents & Integrations — NOT STARTED
+Document storage/attachments (not modeled at all), Stripe billing,
+external calendar sync (Google/Outlook).
 
 ---
 
@@ -110,32 +140,40 @@ Full CRUD, dedicated `/:id/complete` and `/:id/reopen` action endpoints (Activit
 
 | Workstream | Current state | Action |
 |---|---|---|
-| **Testing** | 13 test files covering Auth, CRM, Dashboard, Leads (rbac/convert/scoring/outbox-payload), Pipeline, Tasks, Automation (engine/ai-poller/lead-score-trigger/rbac) | Add pytest coverage in `apps/ai-service` |
-| **CI/CD** | `.github/workflows/.gitkeep` pending | GitHub Actions: lint + typecheck + test on PR |
-| **Docker** | ✅ Done — `docker-compose.yml` for local Postgres + API + ai-service + web (with `NEXT_PUBLIC_API_URL` build ARG fix) | Production container hardening |
-| **Deployment** | Local Docker Compose verified | Vercel (web) + Railway (api + Postgres + ai-service) |
-| **Security hardening** | Helmet + rate-limit on Node API; shared-secret auth on ai-service | CSRF protection for cookie-based Clerk sessions, audit logging table |
-| **API client unification** | ✅ Done — `dashboard-api.ts` uses context-aware `apiClient` | — |
-| **Python build hygiene** | ✅ Done — `venv`/`__pycache__` untracked & `.gitignore` updated | — |
+| **Testing** | 18 test files: Auth, CRM, Dashboard, Leads, Pipeline, Tasks, Reports, Automation (engine/ai-poller/rbac/lead-score-trigger) | **Communication Hub has zero coverage — add integration tests for `sendDraft` (both channels) and the two inbound webhooks before anything else** |
+| **CI/CD** | `.github/workflows/.gitkeep` — still nothing | GitHub Actions: lint + typecheck + test on PR |
+| **Docker** | ✅ Done — `docker-compose.yml`, all 4 services | Production container hardening |
+| **Deployment** | Local Docker Compose only | Vercel (web) + Railway (api + Postgres + ai-service) |
+| **Security hardening** | Helmet + rate-limit; shared-secret AI auth | Webhook signature verification (SendGrid + Twilio), CSRF for Clerk sessions |
+| **Python build hygiene** | ✅ Done, re-verified clean on every audit | — |
 
 ---
 
 ## 4. Definition of Done (applies to every module, no exceptions)
 
-A module is **not done** until all of the following are true:
-1. Prisma migration has actually been run against a real Postgres instance.
+1. Prisma migration run against a real Postgres instance.
 2. At least one integration test hits the real endpoint and passes.
-3. Frontend loading/error/empty states are implemented (not just the happy path).
-4. `docs/api/<module>.md` is written.
-5. No button, link, or form in the module points to a route that 404s.
+3. Frontend loading/error/empty states implemented.
+4. `docs/api/<module>.md` written.
+5. No button, link, or form points to a route that 404s.
+
+**Communication Hub does not yet meet criterion 2** — tracked explicitly
+above, not swept under "done."
 
 ---
 
 ## 5. Immediate Next Action
 
-1. **AI Workspace Frontend**:
-   - Add "Score with AI" UI action on Leads frontend table and detail views.
-   - Wire `AIInsightsPanel` on the Dashboard to the live AI backend endpoint.
-2. **CI/CD & Cloud Infrastructure**:
-   - Write GitHub Actions workflow for automated testing on PRs.
+1. **Communication Hub test coverage** — the single highest-priority gap
+   right now. Integration tests for `POST /messages/:id/send` (email path
+   and SMS path), and for both inbound webhooks.
+2. **CI/CD** — GitHub Actions running lint + typecheck + the full test
+   suite on every PR. Increasingly overdue given the codebase's size.
+3. **Webhook signature verification** — SendGrid and Twilio, both
+   currently unverified by design-with-a-flag, not by oversight — but
+   real work before either handles production traffic.
+4. Only after 1–3: WhatsApp (Communication Hub Phase 3), Documents,
+   Integrations/billing.
 
+No module should be started until this section is updated to name it
+explicitly.
