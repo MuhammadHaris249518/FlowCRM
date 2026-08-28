@@ -15,7 +15,6 @@ import { automationRouter } from "./modules/automation/automation.routes";
 import { reportsRouter } from "./modules/reports/reports.routes";
 import { communicationRouter } from "./modules/communication/communication.routes";
 import { sendgridWebhookRouter } from "./modules/communication/webhooks/sendgrid.webhook";
-import { twilioSmsWebhookRouter } from "./modules/communication/webhooks/twilio-sms.webhook";
 export function createApp() {
   const app = express();
 
@@ -48,7 +47,6 @@ export function createApp() {
   // SendGrid Inbound Parse posts multipart form data — also needs to be
   // mounted before express.json(), same reasoning as the Clerk webhook.
   app.use("/api/v1/webhooks/sendgrid", sendgridWebhookRouter);
-  app.use("/api/v1/webhooks/twilio-sms", twilioSmsWebhookRouter);
 
   app.use(express.json());
 

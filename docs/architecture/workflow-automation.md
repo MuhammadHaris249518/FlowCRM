@@ -20,7 +20,7 @@ pre-built third-party connectors. It's a poor fit for owning *domain
 state* — "this workflow is on step 2 of 4, waiting on a 3-day timer, tied
 to Lead #4821" is core product logic, not integration glue, and needs the
 same transactional guarantees and RBAC scoping as the rest of the CRM data.
-Decision: no n8n. External side effects (Slack, Twilio, SMTP) are called
+Decision: no n8n. External side effects (Slack, SendGrid) are called
 directly from Node/Python integration functions instead.
 
 ## Core pattern: Postgres outbox + Node background poller

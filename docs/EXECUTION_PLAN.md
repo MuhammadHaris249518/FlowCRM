@@ -32,15 +32,15 @@ contracts.
 | Tasks / Calendar | ✅ | ✅ | ✅ | ✅ | Full CRUD + complete/reopen, month-view calendar |
 | AI Workspace / `apps/ai-service` | ✅ | ✅ | ✅ | ✅ | **Fully done.** FastAPI service (`/score-lead`, `/email/draft`), Score-with-AI button with loading/reasoning-tooltip/error states, LangGraph Evaluator-Optimizer email loop |
 | Workflow Automation | ✅ | ✅ | ✅ | ✅ | Outbox + AI + resume pollers, `TRIGGER`/`CONDITION`/`DELAY`/`ACTION_STATIC`/`ACTION_AI` node types, React Flow visual builder |
-| **Communication Hub** | ✅ | ✅ | ❌ | ✅ | **Email (Phase 1) + SMS (Phase 2) both live** — SendGrid + Twilio send/receive, conversation thread UI (`ConversationThreadBox`, per-Lead messages page), Send button auto-completes linked AI-draft Tasks. **Zero automated test coverage — manual verification only, a real gap.** WhatsApp (Phase 3) not started. |
+| **Communication Hub** | ✅ | ✅ | ❌ | ✅ | **Email-only by product decision.** SendGrid send/receive, conversation thread UI (`ConversationThreadBox`, per-Lead messages page), Send button auto-completes linked AI-draft Tasks. SMS (Twilio) was implemented in Phase 2, then fully removed — see below. WhatsApp was never built and is not planned. **Zero automated test coverage — manual verification only, a real gap.** |
 | Reports | ✅ | ✅ | ✅ | — | Funnel, win/loss, CSV export — `reports.funnel.test.ts`, `reports.win-loss.test.ts`, `reports.export.test.ts`, `reports.csv.test.ts`, `reports.trends.test.ts` |
 | Documents | ❌ | ❌ | — | — | Not modeled |
 | Integrations | ❌ | ❌ | — | — | Not started (Stripe billing, external calendar sync) |
 | CI/CD, Docker, Deployment | 🟡 | — | — | — | Local `docker-compose.yml` + Dockerfiles live; GitHub Actions still just `.gitkeep` |
 
 **Overall completion: ~85% of full SRS scope.** Every core CRM module,
-AI Workspace, Workflow Automation, and Communication Hub (email + SMS)
-are done. Remaining: WhatsApp channel, Documents, Integrations/billing,
+AI Workspace, Workflow Automation, and Communication Hub (email-only, by
+product decision) are done. Remaining: Documents, Integrations/billing,
 CI/CD.
 
 Legend: ✅ done and verified against live repo · 🟡 exists but incomplete/unverified · ❌ not started
@@ -64,8 +64,7 @@ Legend: ✅ done and verified against live repo · 🟡 exists but incomplete/un
   is called statelessly for AI reasoning steps only.
 - **Lead scoring sends boolean signals, not raw PII.**
 - **AI-drafted content is always human-approved, never auto-sent.** Applies
-  to both the email loop and any future channel — SMS drafts follow the
-  identical `DRAFT` → review Task → manual Send pattern, no exceptions.
+  to the email loop — the only channel this project supports.
 - **`ACTION_AI` nodes are asynchronous** via the same `WAITING`/resume
   mechanism as `DELAY` nodes.
 - **No module is "done" without**: migration run against a real DB, at
@@ -103,32 +102,32 @@ asynchronously (`WAITING` state, same mechanism as `DELAY`), creates a
 draft Task on completion — never auto-sends. Full design in
 `docs/architecture/workflow-automation.md`.
 
-### ✅ Phase 6 — Communication Hub (Email + SMS) — DONE, TESTS PENDING
+### ✅ Phase 6 — Communication Hub (Email-Only) — DONE, TESTS PENDING
 
-**Phase 1 (Email) — done:** `Message` model, SendGrid client, `POST
+**Email — done:** `Message` model, SendGrid client, `POST
 /communication/messages/:id/send`, SendGrid Inbound Parse webhook,
 conversation thread UI (`ConversationThreadBox`, `MessageBubble`,
 `LeadMessagesDialog`, `/leads/[id]/messages` page). The `ACTION_AI` email
-loop now creates a real linked `DRAFT` `Message` alongside its review
-Task — sending it completes the Task automatically.
+loop creates a real linked `DRAFT` `Message` alongside its review Task —
+sending it completes the Task automatically.
 
-**Phase 2 (SMS) — done:** `MessageChannel.SMS` added, Twilio client,
-`sendDraft` branches by channel (SendGrid vs Twilio, same downstream
-Activity-logging/Task-completion logic either way), Twilio inbound
-webhook. No frontend changes needed — the UI is channel-agnostic by
-design.
+**SMS — implemented, then removed.** `MessageChannel.SMS`, the Twilio
+client, and the Twilio inbound webhook were built and manually verified,
+then fully removed by product decision (this is a professional platform;
+email-only was judged the right scope). If SMS is ever revisited, this
+history and the original agent plans are the reference point — don't
+rebuild from scratch without checking what changed since.
 
 **Known gaps, not hidden:**
 - **No automated tests for this module at all** — every verification so
-  far has been manual (`curl` + checking a real inbox/phone). This is the
-  top testing priority right now.
-- No webhook signature verification (SendGrid or Twilio) — flagged in
-  both webhook files' comments and in `docs/api/communication.md`.
-- Single hardcoded `DEFAULT_ORG_ID_FOR_INBOUND_EMAIL`/`_SMS` — no real
+  far has been manual (`curl` + checking a real inbox). This is the top
+  testing priority right now.
+- No webhook signature verification on the SendGrid webhook — flagged in
+  the webhook file's comments and in `docs/api/communication.md`.
+- Single hardcoded `DEFAULT_ORG_ID_FOR_INBOUND_EMAIL` — no real
   per-tenant inbound routing yet.
-- `toE164()`'s default country code is an unverified placeholder.
 
-**Not started:** WhatsApp (Phase 3 of this module).
+**Not planned:** SMS, WhatsApp.
 
 ### ❌ Phase 5 — Documents & Integrations — NOT STARTED
 Document storage/attachments (not modeled at all), Stripe billing,
@@ -144,7 +143,7 @@ external calendar sync (Google/Outlook).
 | **CI/CD** | `.github/workflows/.gitkeep` — still nothing | GitHub Actions: lint + typecheck + test on PR |
 | **Docker** | ✅ Done — `docker-compose.yml`, all 4 services | Production container hardening |
 | **Deployment** | Local Docker Compose only | Vercel (web) + Railway (api + Postgres + ai-service) |
-| **Security hardening** | Helmet + rate-limit; shared-secret AI auth | Webhook signature verification (SendGrid + Twilio), CSRF for Clerk sessions |
+| **Security hardening** | Helmet + rate-limit; shared-secret AI auth | Webhook signature verification (SendGrid), CSRF for Clerk sessions |
 | **Python build hygiene** | ✅ Done, re-verified clean on every audit | — |
 
 ---
@@ -165,13 +164,13 @@ above, not swept under "done."
 ## 5. Immediate Next Action
 
 1. **Communication Hub test coverage** — the single highest-priority gap
-   right now. Integration tests for `POST /messages/:id/send` (email path
-   and SMS path), and for both inbound webhooks.
+   right now. Integration tests for `POST /messages/:id/send` and the
+   SendGrid inbound webhook.
 2. **CI/CD** — GitHub Actions running lint + typecheck + the full test
    suite on every PR. Increasingly overdue given the codebase's size.
-3. **Webhook signature verification** — SendGrid and Twilio, both
-   currently unverified by design-with-a-flag, not by oversight — but
-   real work before either handles production traffic.
+3. **Webhook signature verification** — SendGrid, currently unverified
+   by design-with-a-flag, not by oversight — but real work before it
+   handles production traffic.
 4. Only after 1–3: WhatsApp (Communication Hub Phase 3), Documents,
    Integrations/billing.
 

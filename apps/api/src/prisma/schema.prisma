@@ -40,8 +40,6 @@ enum ActivityType {
   LEAD_CREATED
   EMAIL_SENT
   EMAIL_RECEIVED
-  SMS_SENT
-  SMS_RECEIVED
   CALL_LOGGED
   MEETING_SCHEDULED
   DEAL_STAGE_CHANGED
@@ -52,8 +50,8 @@ enum ActivityType {
 
 enum MessageChannel {
   EMAIL
-  SMS
-  // WHATSAPP added when that phase is built.
+  // Email-only by product decision — see docs/EXECUTION_PLAN.md.
+  // Do not add SMS/WhatsApp without revisiting that decision first.
 }
 
 enum MessageDirection {

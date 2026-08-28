@@ -56,7 +56,7 @@ const FEATURES: Feature[] = [
     iconBg: "bg-pink-50",
     iconColor: "text-pink-600",
     title: "Communication Hub",
-    description: "Manage Email, SMS, WhatsApp conversations in one unified inbox.",
+    description: "Manage all your email conversations with leads and customers in one place.",
   },
   {
     icon: CalendarDays,
