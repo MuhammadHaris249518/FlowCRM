@@ -14,7 +14,7 @@ import { tasksRouter } from "./modules/tasks/tasks.routes";
 import { automationRouter } from "./modules/automation/automation.routes";
 import { reportsRouter } from "./modules/reports/reports.routes";
 import { communicationRouter } from "./modules/communication/communication.routes";
-import { sendgridWebhookRouter } from "./modules/communication/webhooks/sendgrid.webhook";
+import { resendWebhookRouter } from "./modules/communication/webhooks/resend.webhook";
 export function createApp() {
   const app = express();
 
@@ -44,9 +44,9 @@ export function createApp() {
   // express.raw() itself, but only works if the global JSON parser hasn't
   // already consumed the body first).
   app.use("/api/v1/webhooks/clerk", clerkWebhookRouter);
-  // SendGrid Inbound Parse posts multipart form data — also needs to be
-  // mounted before express.json(), same reasoning as the Clerk webhook.
-  app.use("/api/v1/webhooks/sendgrid", sendgridWebhookRouter);
+  // Resend webhooks are svix-signed and need the RAW body to verify —
+  // same reasoning and same mechanism as the Clerk webhook above.
+  app.use("/api/v1/webhooks/resend", resendWebhookRouter);
 
   app.use(express.json());
 

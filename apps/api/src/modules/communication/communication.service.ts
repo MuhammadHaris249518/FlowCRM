@@ -1,7 +1,7 @@
 import { prisma } from "../../lib/prisma";
 import type { AuthContext } from "../../middleware/auth";
 import { AppError } from "../../errors/app-error";
-import { sendgridClient } from "../../lib/sendgrid-client";
+import { resendClient } from "../../lib/resend-client";
 import { communicationRepository } from "./communication.repository";
 import type { MessageDTO } from "./communication.types";
 
@@ -55,7 +55,7 @@ export const communicationService = {
     }
 
     try {
-      const result = await sendgridClient.sendEmail({
+      const result = await resendClient.sendEmail({
         to: message.toAddress,
         subject: message.subject ?? "(no subject)",
         text: message.body,

@@ -32,7 +32,7 @@ contracts.
 | Tasks / Calendar | ✅ | ✅ | ✅ | ✅ | Full CRUD + complete/reopen, month-view calendar |
 | AI Workspace / `apps/ai-service` | ✅ | ✅ | ✅ | ✅ | **Fully done.** FastAPI service (`/score-lead`, `/email/draft`), Score-with-AI button with loading/reasoning-tooltip/error states, LangGraph Evaluator-Optimizer email loop |
 | Workflow Automation | ✅ | ✅ | ✅ | ✅ | Outbox + AI + resume pollers, `TRIGGER`/`CONDITION`/`DELAY`/`ACTION_STATIC`/`ACTION_AI` node types, React Flow visual builder |
-| **Communication Hub** | ✅ | ✅ | ❌ | ✅ | **Email-only by product decision.** SendGrid send/receive, conversation thread UI (`ConversationThreadBox`, per-Lead messages page), Send button auto-completes linked AI-draft Tasks. SMS (Twilio) was implemented in Phase 2, then fully removed — see below. WhatsApp was never built and is not planned. **Zero automated test coverage — manual verification only, a real gap.** |
+| **Communication Hub** | ✅ | ✅ | ❌ | ✅ | **Email-only by product decision.** Resend send/receive, conversation thread UI (`ConversationThreadBox`, per-Lead messages page), Send button auto-completes linked AI-draft Tasks. SMS (Twilio) was implemented in Phase 2, then fully removed — see below. WhatsApp was never built and is not planned. **Zero automated test coverage — manual verification only, a real gap.** |
 | Reports | ✅ | ✅ | ✅ | — | Funnel, win/loss, CSV export — `reports.funnel.test.ts`, `reports.win-loss.test.ts`, `reports.export.test.ts`, `reports.csv.test.ts`, `reports.trends.test.ts` |
 | Documents | ❌ | ❌ | — | — | Not modeled |
 | Integrations | ❌ | ❌ | — | — | Not started (Stripe billing, external calendar sync) |
@@ -104,8 +104,8 @@ draft Task on completion — never auto-sends. Full design in
 
 ### ✅ Phase 6 — Communication Hub (Email-Only) — DONE, TESTS PENDING
 
-**Email — done:** `Message` model, SendGrid client, `POST
-/communication/messages/:id/send`, SendGrid Inbound Parse webhook,
+**Email — done:** `Message` model, Resend client, `POST
+/communication/messages/:id/send`, Resend inbound webhook (Svix signed),
 conversation thread UI (`ConversationThreadBox`, `MessageBubble`,
 `LeadMessagesDialog`, `/leads/[id]/messages` page). The `ACTION_AI` email
 loop creates a real linked `DRAFT` `Message` alongside its review Task —
@@ -122,8 +122,9 @@ rebuild from scratch without checking what changed since.
 - **No automated tests for this module at all** — every verification so
   far has been manual (`curl` + checking a real inbox). This is the top
   testing priority right now.
-- No webhook signature verification on the SendGrid webhook — flagged in
-  the webhook file's comments and in `docs/api/communication.md`.
+- ~~No webhook signature verification~~ — **resolved.** Switched from
+  SendGrid to Resend; inbound webhooks are now Svix-signed and verified,
+  reusing the same pattern already proven for the Clerk webhook.
 - Single hardcoded `DEFAULT_ORG_ID_FOR_INBOUND_EMAIL` — no real
   per-tenant inbound routing yet.
 
@@ -143,7 +144,7 @@ external calendar sync (Google/Outlook).
 | **CI/CD** | `.github/workflows/.gitkeep` — still nothing | GitHub Actions: lint + typecheck + test on PR |
 | **Docker** | ✅ Done — `docker-compose.yml`, all 4 services | Production container hardening |
 | **Deployment** | Local Docker Compose only | Vercel (web) + Railway (api + Postgres + ai-service) |
-| **Security hardening** | Helmet + rate-limit; shared-secret AI auth | Webhook signature verification (SendGrid), CSRF for Clerk sessions |
+| **Security hardening** | Helmet + rate-limit; shared-secret AI auth; Resend webhook signature verification (Svix) | CSRF for Clerk sessions |
 | **Python build hygiene** | ✅ Done, re-verified clean on every audit | — |
 
 ---
@@ -165,12 +166,10 @@ above, not swept under "done."
 
 1. **Communication Hub test coverage** — the single highest-priority gap
    right now. Integration tests for `POST /messages/:id/send` and the
-   SendGrid inbound webhook.
+   Resend inbound webhook.
 2. **CI/CD** — GitHub Actions running lint + typecheck + the full test
    suite on every PR. Increasingly overdue given the codebase's size.
-3. **Webhook signature verification** — SendGrid, currently unverified
-   by design-with-a-flag, not by oversight — but real work before it
-   handles production traffic.
+3. ~~Webhook signature verification~~ — done, see Resend swap above.
 4. Only after 1–3: WhatsApp (Communication Hub Phase 3), Documents,
    Integrations/billing.
 

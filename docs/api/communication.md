@@ -1,8 +1,12 @@
 # Communication API
 
-**Email-only by product decision.** SMS was implemented and then removed
-(see `docs/EXECUTION_PLAN.md`); WhatsApp was never built. Do not re-add
-either without revisiting that decision.
+**Email-only by product decision.** SMS was implemented and then removed;
+WhatsApp was never built (see `docs/EXECUTION_PLAN.md`).
+
+Provider: **Resend** (switched from SendGrid — SendGrid required phone
+verification that was a real onboarding blocker; Resend's inbound
+webhooks are also properly signature-verified via Svix, closing a gap
+the SendGrid integration had left open).
 
 Base path: `/api/v1/communication`. All routes require
 `Authorization: Bearer <clerk_session_token>`.
@@ -16,24 +20,28 @@ Lead, newest first.
 
 ## POST /messages/:id/send
 
-Sends an existing **draft** message via SendGrid. This is the only send
+Sends an existing **draft** message via Resend. This is the only send
 path — there's no free-form "compose new email" endpoint yet. The primary
 source of draft messages is the `ACTION_AI` workflow node (see
-`docs/architecture/workflow-automation.md`) — when its email loop
-finishes, it creates both a review Task and a linked `DRAFT` Message; this
-endpoint is what the Task's "Send" button calls.
+`docs/architecture/workflow-automation.md`).
 
 **Errors:** `400 NOT_A_DRAFT` if the message was already sent,
 `400 MISSING_RECIPIENT` if there's no `toAddress` on the message,
-`400 SEND_FAILED` if SendGrid rejects the send (message is marked `FAILED`, not deleted).
+`400 SEND_FAILED` if Resend rejects the send (message is marked `FAILED`, not deleted).
 
-## POST /webhooks/sendgrid (SendGrid Inbound Parse → this app)
+## POST /webhooks/resend (Resend → this app)
 
-Not called by a FlowCRM client — SendGrid calls this when an email is
-received at your configured inbound address. Records an inbound `Message`,
-best-effort-linked to a `Contact` by matching the sender's email address.
+Not called by a FlowCRM client — Resend calls this on the `email.received`
+event when an email arrives at your configured inbound address (either a
+Resend-managed `<id>.resend.app` subdomain, or your own verified domain).
+Records an inbound `Message`, best-effort-linked to a `Contact` by
+matching the sender's email address.
 
-**Known limitation:** no signature verification on this webhook yet, and
-no per-tenant inbound routing (`DEFAULT_ORG_ID_FOR_INBOUND_EMAIL` is a
-single hardcoded org for now). Both need real solutions before this
-handles production traffic — flagged, not hidden.
+**Signature verification is real here** (unlike the previous SendGrid
+integration) — requests are Svix-signed and verified the same way the
+Clerk webhook is (`RESEND_WEBHOOK_SECRET`, `svix-id`/`svix-timestamp`/
+`svix-signature` headers). An unsigned or incorrectly-signed request is
+rejected with `400 INVALID_SIGNATURE`.
+
+**Still a known limitation:** no per-tenant inbound routing yet —
+`DEFAULT_ORG_ID_FOR_INBOUND_EMAIL` is a single hardcoded org.
