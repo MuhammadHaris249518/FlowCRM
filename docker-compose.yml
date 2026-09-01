@@ -41,7 +41,7 @@ services:
       RESEND_FROM_EMAIL: "${RESEND_FROM_EMAIL:-}"
       RESEND_WEBHOOK_SECRET: "${RESEND_WEBHOOK_SECRET:-}"
       DEFAULT_ORG_ID_FOR_INBOUND_EMAIL: "${DEFAULT_ORG_ID_FOR_INBOUND_EMAIL:-}"
-    command: sh -c "npx prisma db push --schema=src/prisma/schema.prisma && node dist/server.js"
+    command: sh -c "npx prisma db push --accept-data-loss --schema=src/prisma/schema.prisma && node dist/server.js"
     depends_on:
       postgres:
         condition: service_healthy
