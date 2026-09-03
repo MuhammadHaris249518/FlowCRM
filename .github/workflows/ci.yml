@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+jobs:
+  web:
+    name: Web — lint, build, test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --workspace=apps/web
+
+      - name: Build (also type-checks)
+        run: npm run build --workspace=apps/web
+
+      - name: Test
+        run: npm run test --workspace=apps/web
+
+  api:
+    name: API — build, test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: flowcrm
+          POSTGRES_PASSWORD: flowcrm_ci_password
+          POSTGRES_DB: flowcrm_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://flowcrm:flowcrm_ci_password@localhost:5432/flowcrm_ci
+      PORT: 4000
+      WEB_APP_URL: http://localhost:3000
+      CLERK_SECRET_KEY: test_clerk_secret_placeholder
+      CLERK_PUBLISHABLE_KEY: test_clerk_publishable_placeholder
+      CLERK_WEBHOOK_SECRET: test_clerk_webhook_placeholder
+      AI_SERVICE_URL: http://localhost:8000
+      INTERNAL_SERVICE_KEY: test_internal_key_placeholder
+      RESEND_API_KEY: test_resend_key_placeholder
+      RESEND_FROM_EMAIL: test@example.com
+      RESEND_WEBHOOK_SECRET: test_resend_webhook_placeholder
+      DEFAULT_ORG_ID_FOR_INBOUND_EMAIL: test_org_placeholder
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate --workspace=apps/api
+
+      - name: Push schema to CI database
+        run: npx prisma db push --schema apps/api/src/prisma/schema.prisma --skip-generate
+
+      - name: Build (also type-checks)
+        run: npm run build --workspace=apps/api
+
+      - name: Test
+        run: npm run test --workspace=apps/api
