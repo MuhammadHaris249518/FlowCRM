@@ -52,6 +52,11 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://flowcrm:flowcrm_ci_password@localhost:5432/flowcrm_ci
+      # schema.prisma requires DIRECT_URL alongside DATABASE_URL (Supabase's
+      # pooled-connection pattern). CI's throwaway Postgres has no pooler,
+      # so both point at the exact same connection — that's correct here,
+      # not a placeholder standing in for something more complex.
+      DIRECT_URL: postgresql://flowcrm:flowcrm_ci_password@localhost:5432/flowcrm_ci
       PORT: 4000
       WEB_APP_URL: http://localhost:3000
       CLERK_SECRET_KEY: test_clerk_secret_placeholder
