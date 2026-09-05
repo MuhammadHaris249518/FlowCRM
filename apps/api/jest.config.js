@@ -1,15 +1,19 @@
-import type { Config } from "jest";
-
 // Jest can't run NodeNext/ESM-style output cleanly, so tests are compiled to
 // CommonJS via a dedicated tsconfig override (tests/tsconfig.json) instead of
 // touching src/tsconfig.json, which stays NodeNext for the real build.
-const config: Config = {
+//
+// This is plain JS, not jest.config.ts, specifically so Jest never needs
+// ts-node just to bootstrap reading its own config file — ts-jest (used
+// below, in the `transform` section) is a separate, already-working piece
+// that handles the actual .test.ts files themselves.
+/** @type {import('jest').Config} */
+const config = {
   preset: "ts-jest",
   testEnvironment: "node",
   rootDir: ".",
   roots: ["<rootDir>/tests"],
   moduleNameMapper: {
-    "^@clerk/express$": "<rootDir>/__mocks__/@clerk/express.ts"
+    "^@clerk/express$": "<rootDir>/__mocks__/@clerk/express.ts",
   },
   testMatch: ["<rootDir>/tests/**/*.test.ts"],
   setupFiles: ["<rootDir>/tests/jest.setup.ts"],
@@ -29,4 +33,4 @@ const config: Config = {
   clearMocks: true,
 };
 
-export default config;
+module.exports = config;
