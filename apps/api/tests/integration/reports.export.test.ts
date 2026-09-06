@@ -48,6 +48,7 @@ describe("GET /reports/*/export", () => {
   });
 
   it("rejects unauthenticated export requests", async () => {
+    __setMockClerkUserId(null); // ensure no mocked auth leaks from previous tests
     const res = await request(app).get("/api/v1/reports/conversion-funnel/export");
     expect(res.status).toBe(401);
   });
