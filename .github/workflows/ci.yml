@@ -31,6 +31,27 @@ jobs:
       - name: Test
         run: npm run test --workspace=apps/web
 
+  ai-service:
+    name: AI Service — test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: apps/ai-service/requirements.txt
+
+      - name: Install dependencies
+        working-directory: apps/ai-service
+        run: pip install -r requirements.txt
+
+      - name: Test
+        working-directory: apps/ai-service
+        run: pytest -v
+
   api:
     name: API — build, test
     runs-on: ubuntu-latest
