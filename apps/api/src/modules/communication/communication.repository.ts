@@ -13,6 +13,7 @@ export const communicationRepository = {
   async listForContact(auth: AuthContext, contactId: string, limit: number) {
     return prisma.message.findMany({
       where: { ...scopeFilter(auth), contactId },
+      include: { attachments: { include: { document: true } } },
       orderBy: { createdAt: "desc" },
       take: limit,
     });
@@ -21,6 +22,7 @@ export const communicationRepository = {
   async listForLead(auth: AuthContext, leadId: string, limit: number) {
     return prisma.message.findMany({
       where: { ...scopeFilter(auth), leadId },
+      include: { attachments: { include: { document: true } } },
       orderBy: { createdAt: "desc" },
       take: limit,
     });
@@ -30,6 +32,7 @@ export const communicationRepository = {
     return prisma.message.update({
       where: { id },
       data: { status: "SENT", externalId, sentAt: new Date() },
+      include: { attachments: { include: { document: true } } },
     });
   },
 

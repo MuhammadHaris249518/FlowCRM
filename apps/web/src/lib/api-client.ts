@@ -95,11 +95,34 @@ async function request<T>(
   return parseEnvelope<T>(res);
 }
 
+async function requestFormData<T>(
+  path: string,
+  ctx: RequestContext,
+  formData: FormData
+): Promise<T> {
+  const url = new URL(`${API_BASE_URL}${path}`);
+  const token = await ctx.getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (ctx.organizationId) headers["X-Organization-Id"] = ctx.organizationId;
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers,
+    body: formData,
+    credentials: "include",
+  });
+
+  return parseEnvelope<T>(res);
+}
+
 export const apiClient = {
   get: <T>(path: string, ctx: RequestContext, params?: Record<string, string>) =>
     request<T>("GET", path, ctx, { params }),
   post: <T>(path: string, ctx: RequestContext, body?: unknown) =>
     request<T>("POST", path, ctx, { body }),
+  postFormData: <T>(path: string, ctx: RequestContext, formData: FormData) =>
+    requestFormData<T>(path, ctx, formData),
   patch: <T>(path: string, ctx: RequestContext, body?: unknown) =>
     request<T>("PATCH", path, ctx, { body }),
   delete: <T>(path: string, ctx: RequestContext) => request<T>("DELETE", path, ctx),

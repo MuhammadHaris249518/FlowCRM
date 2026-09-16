@@ -35,6 +35,7 @@ const INITIAL_MESSAGES: (Message & { contactName: string })[] = [
     receivedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
     createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
     contactName: "Sarah Jenkins (Acme Corp)",
+    attachments: [],
   },
   {
     id: "msg-2",
@@ -49,6 +50,7 @@ const INITIAL_MESSAGES: (Message & { contactName: string })[] = [
     receivedAt: null,
     createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
     contactName: "Sarah Jenkins (Acme Corp)",
+    attachments: [],
   },
   {
     id: "msg-3",
@@ -63,6 +65,7 @@ const INITIAL_MESSAGES: (Message & { contactName: string })[] = [
     receivedAt: null,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
     contactName: "Alex Rivera (StartupHub)",
+    attachments: [],
   },
 ];
 
@@ -128,6 +131,7 @@ export default function InboxPage() {
         receivedAt: null,
         createdAt: new Date().toISOString(),
         contactName: composeTo.split("@")[0] || composeTo,
+        attachments: [],
       };
 
       setMessages((prev) => [newMsg, ...prev]);
