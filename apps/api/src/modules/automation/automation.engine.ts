@@ -249,6 +249,27 @@ export async function resolveAiNode(run: WorkflowRun, workflow: WorkflowWithGrap
       },
     });
 
+    // If this ACTION_AI node is configured with a document to attach (e.g.
+    // "always attach the pricing sheet to this follow-up"), link it now.
+    // The document isn't chosen by the AI — it's a fixed choice a human set
+    // when configuring the workflow node, kept deliberately simple for v1.
+    const aiNode = workflow.nodes.find((n) => n.id === run.currentNodeId);
+    const attachDocumentId = (aiNode?.config as Record<string, unknown> | undefined)?.attachDocumentId as string | undefined;
+    if (attachDocumentId) {
+      const document = await prisma.document.findFirst({
+        where: { id: attachDocumentId, organizationId },
+      });
+      if (document) {
+        await prisma.messageAttachment.create({
+          data: { messageId: draftMessage.id, documentId: document.id },
+        });
+      }
+      // If the configured document doesn't exist (deleted since the
+      // workflow was set up) or belongs to a different org, this silently
+      // skips attaching rather than failing the whole email draft — a
+      // missing attachment shouldn't block a otherwise-good draft.
+    }
+
     await prisma.task.create({
       data: {
         organizationId,

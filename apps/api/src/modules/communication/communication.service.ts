@@ -10,6 +10,7 @@ function toDTO(m: {
   subject: string | null; body: string; fromAddress: string | null;
   toAddress: string | null; sentAt: Date | null; receivedAt: Date | null;
   createdAt: Date;
+  attachments?: { document: { id: string; fileName: string; fileSize: number } }[];
 }): MessageDTO {
   return {
     id: m.id,
@@ -23,6 +24,11 @@ function toDTO(m: {
     sentAt: m.sentAt?.toISOString() ?? null,
     receivedAt: m.receivedAt?.toISOString() ?? null,
     createdAt: m.createdAt.toISOString(),
+    attachments: (m.attachments ?? []).map((a) => ({
+      id: a.document.id,
+      fileName: a.document.fileName,
+      fileSize: a.document.fileSize,
+    })),
   };
 }
 

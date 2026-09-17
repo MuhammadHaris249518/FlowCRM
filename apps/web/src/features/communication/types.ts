@@ -8,6 +8,12 @@ export type MessageStatus =
   | "FAILED"
   | "RECEIVED";
 
+export interface MessageAttachment {
+  id: string;
+  fileName: string;
+  fileSize: number;
+}
+
 export interface Message {
   id: string;
   channel: MessageChannel;
@@ -20,4 +26,5 @@ export interface Message {
   sentAt: string | null;
   receivedAt: string | null;
   createdAt: string;
+  attachments: MessageAttachment[];
 }

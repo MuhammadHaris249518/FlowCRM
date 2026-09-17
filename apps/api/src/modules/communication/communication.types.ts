@@ -1,3 +1,9 @@
+export interface MessageAttachmentDTO {
+  id: string;
+  fileName: string;
+  fileSize: number;
+}
+
 export interface MessageDTO {
   id: string;
   channel: string;
@@ -10,4 +16,6 @@ export interface MessageDTO {
   sentAt: string | null;
   receivedAt: string | null;
   createdAt: string;
+  attachments: MessageAttachmentDTO[];
 }
+
