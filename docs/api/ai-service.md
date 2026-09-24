@@ -164,6 +164,42 @@ not survive a restart and will not work correctly across multiple
 uvicorn workers. See `app/services/job_store.py` for the documented
 tradeoff.
 
+## POST /assistant/chat
+
+One Groq turn for the in-product assistant. Node owns the tool loop and
+the database; this service is stateless. Called by
+`POST /api/v1/assistant/chat` (see `docs/api/assistant.md`).
+
+**Request body**
+
+| Field | Type | Notes |
+|---|---|---|
+| messages | array | `user` / `assistant` / `tool` turns. System prompt is applied here, not by Node. |
+| tools | array | OpenAI-style function schemas Node is willing to execute |
+
+**Response `200`**
+
+Either a text `content` (final reply) or `tool_calls` for Node to run:
+
+```json
+{
+  "role": "assistant",
+  "content": null,
+  "tool_calls": [
+    { "id": "call_1", "name": "search_leads", "arguments": { "sortBy": "score", "limit": 5 } }
+  ]
+}
+```
+
+**PII:** unlike `/score-lead`, this path may receive names and emails
+inside tool-result messages — they are records the caller already has,
+scoped by Node before they reach this service. Phone numbers are omitted.
+
+**Errors**
+- `401` — missing/invalid `X-Internal-Service-Key`
+- `422` — request body fails validation
+- `500` — Groq call failed
+
 
 ## Environment variables
 

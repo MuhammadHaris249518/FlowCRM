@@ -15,6 +15,7 @@ import { automationRouter } from "./modules/automation/automation.routes";
 import { reportsRouter } from "./modules/reports/reports.routes";
 import { communicationRouter } from "./modules/communication/communication.routes";
 import { documentsRouter } from "./modules/documents/documents.routes";
+import { assistantRouter } from "./modules/assistant/assistant.routes";
 import { resendWebhookRouter } from "./modules/communication/webhooks/resend.webhook";
 export function createApp() {
   const app = express();
@@ -89,6 +90,7 @@ export function createApp() {
   app.use("/api/v1/reports", reportsRouter);
   app.use("/api/v1/communication", communicationRouter);
   app.use("/api/v1/documents", documentsRouter);
+  app.use("/api/v1/assistant", assistantRouter);
 
   // Must be registered last — Express matches error middleware by arity (4 args).
   app.use(errorHandler);
