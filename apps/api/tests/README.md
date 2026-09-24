@@ -28,6 +28,8 @@ separate test database. See "Isolation" below for why that's safe.
 - `tests/integration/pipeline.rbac.test.ts` — same RBAC pattern for deals,
   plus the `closedAt` derivation logic (set on `WON`/`LOST`, cleared when
   moved back out) and activity logging on stage change.
+- `tests/integration/assistant.chat.test.ts` — tool loop over live org data
+  (`search_leads` is scoped, `draft_email` writes a DRAFT and never sends).
 
 ## Not covered yet (next batch)
 

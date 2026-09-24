@@ -30,7 +30,7 @@ contracts.
 | Leads | ✅ | ✅ | ✅ | ✅ | Full CRUD + `/convert` (transactional) + `/:id/score` (AI scoring, reasoning surfaced in UI) + `LEAD_SCORE_CHANGED` outbox event |
 | Sales Pipeline | ✅ | ✅ | ✅ | ✅ | Kanban board, stage transitions w/ `closedAt` + Activity logging |
 | Tasks / Calendar | ✅ | ✅ | ✅ | ✅ | Full CRUD + complete/reopen, month-view calendar |
-| AI Workspace / `apps/ai-service` | ✅ | ✅ | ✅ | ✅ | **Fully done.** FastAPI service (`/score-lead`, `/email/draft`), Score-with-AI button with loading/reasoning-tooltip/error states, LangGraph Evaluator-Optimizer email loop |
+| AI Workspace / `apps/ai-service` | ✅ | ✅ | ✅ | ✅ | FastAPI `/score-lead`, `/email/draft`, and `/assistant/chat` (tool-calling). `/ai-assistant` is a live chat over `POST /api/v1/assistant/chat` — Node executes RBAC-scoped tools; drafts are never auto-sent |
 | Workflow Automation | ✅ | ✅ | ✅ | ✅ | Outbox + AI + resume pollers, `TRIGGER`/`CONDITION`/`DELAY`/`ACTION_STATIC`/`ACTION_AI` node types, React Flow visual builder |
 | **Communication Hub** | ✅ | ✅ | ❌ | ✅ | **Email-only by product decision.** Resend send/receive, conversation thread UI (`ConversationThreadBox`, per-Lead messages page), Send button auto-completes linked AI-draft Tasks. SMS (Twilio) was implemented in Phase 2, then fully removed — see below. WhatsApp was never built and is not planned. **Zero automated test coverage — manual verification only, a real gap.** |
 | Reports | ✅ | ✅ | ✅ | — | Funnel, win/loss, CSV export — `reports.funnel.test.ts`, `reports.win-loss.test.ts`, `reports.export.test.ts`, `reports.csv.test.ts`, `reports.trends.test.ts` |
